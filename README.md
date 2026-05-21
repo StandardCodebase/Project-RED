@@ -1,4 +1,4 @@
-# Project R.E.D. (Reduced, Encrypted, Decentralized)
+# Project R.E.D
 
 ## Sovereign Knowledge Node Engine
 
