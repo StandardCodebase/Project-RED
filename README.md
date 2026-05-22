@@ -7,25 +7,25 @@ Project R.E.D. rejects both centralized database monopolies and overly complex d
 
 The engine operates as a stateless, high-performance Go runtime that compiles raw Markdown files into visually polarized technical templates, dynamically injecting cryptographic integrity signatures on every request loop.
 
-## 1. The Philosophy: Red Sovereignty vs. Blue Illusion
+## 1. The Philosophy: Red Sovereignty 
 
-The internet is broken not from a lack of information, but from a fundamental crisis of architecture. Well-meaning idealists continually attempt to fix this by proposing centralized chokepoints like B.L.U.E. (Broad Learning Universal Education)—a theoretical centralized archive designed to hold all human "how-to" knowledge in a single, strictly moderated, unified database.
+The internet is broken not from a lack of information, but from a fundamental crisis of architecture. Well-meaning idealists continually attempt to fix this by proposing centralized chokepoints—a theoretical centralized archive designed to hold all human "how-to" knowledge in a single, strictly moderated, unified database.
 
-While noble in its intent to provide universal free education, the BLUE System suffers from structural flaws that guarantee its immediate compromise or destruction:
+While noble in its intent to provide universal free education, all centralized systems suffer from structural flaws that guarantee its immediate compromise or destruction:
 
 - **The Single Point of Failure:** By attempting to gather all technical knowledge onto a single domain, the Blue System creates an existential target for corporate lawfare and state suppression.
 - **The Conflict of Interest:** The moment a platform's revenue is derived from a percentage of material sales via affiliate links, its neutrality is permanently compromised.
 - **The Jury-Style Delusion:** Relying on an uncompensated "jury" of randomly selected expert verifiers to audit complex technical workflows is an economic fantasy.
 - **The Dependency Hell of Linear Hierarchies:** Forcing all human knowledge into a rigid, linear hierarchy where Level 4 strictly depends on Level 1 creates a catastrophic maintenance bottleneck.
 
-## 2. How R.E.D Fixes B.L.U.E
+## 2. How R.E.D Fixes That
 
 
 Project R.E.D. systematically dismantles the architectural vulnerabilities inherent in centralized knowledge repositories.
 
-- **Eradicating the Single Point of Failure:** B.L.U.E. relies on a master domain, creating a massive target for corporate lawfare and global de-indexing. R.E.D. operates on a stateless, dual-tier Docker network topology (Clearnet/Tor), eliminating the centralized attack vector entirely.
+- **Eradicating the Single Point of Failure:** Open platforms rely mainly on a master domain, creating a massive target for corporate lawfare and global de-indexing. R.E.D. operates on a stateless, dual-tier Docker network topology (Clearnet/Tor), eliminating the centralized attack vector entirely.
 
-- **Eliminating Financial Conflicts:** B.L.U.E.'s reliance on contextual advertising fundamentally destroys its neutrality by financially incentivizing the use of expensive corporate materials. R.E.D. requires zero centralized funding, ensuring information remains free from commercial manipulation and review-bombing bots.
+- **Eliminating Financial Conflicts:** Platforms reliance on contextual advertising fundamentally destroys its neutrality by financially incentivizing the use of expensive corporate materials. R.E.D. requires zero centralized funding, ensuring information remains free from commercial manipulation and review-bombing bots.
   
 **Ethical Node Monetization (Optional):** Individual node operators may choose to earn back their costs by including affiliate links or donation addresses within the guides they host. The revenue goes directly to the operator who maintains the node – never to a central entity. Readers can freely choose a different node if they prefer an ad‑free experience. No special code is needed: operators simply create a `Requirements.md` file inside a guide’s folder listing necessary parts (with their affiliate links), and link to it from the guide’s main `index.md` or introductory file. This keeps monetization transparent, decentralized, and entirely opt‑in.
 
@@ -33,7 +33,7 @@ Project R.E.D. systematically dismantles the architectural vulnerabilities inher
 
 - **Bypassing Dependency Hell:** B.L.U.E. enforces a rigid, linear learning hierarchy where a single obsolete foundational guide can collapse the entire structure. R.E.D. prevents this by leveraging native filesystem directories and dynamic versioning, allowing knowledge to adapt organically without cascading failures.
 
-- **Resolving the "Spin-Off" Paradox:** B.L.U.E. mandates one definitive guide per topic, yet paradoxically suggests forking contested guides during disputes, guaranteeing a cluttered, redundant database. R.E.D. removes moderation logic from the runtime entirely; the end-user's local client seamlessly curates the best version based on established network consensus.
+- **Resolving the "Spin-Off" Paradox:** B.L.U.E. is ambitious, mandates one definitive guide per topic, yet paradoxically suggests forking contested guides during disputes, guaranteeing a cluttered, redundant database. R.E.D. removes moderation logic from the runtime entirely; the end-user's local client seamlessly curates the best version based on established network consensus.
 
 ## 3. Architecture: The Dual-Tier Deployment
 
