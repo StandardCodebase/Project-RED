@@ -64,7 +64,7 @@ services:
     links:
       - red_dark_node
     environment:
-      RED_DARK_NODE_TOR_SERVICE_HOSTS: "80:red_dark_node:9090"
+      VAULT_TOR_SERVICE_HOSTS: "80:red_dark_node:9090"
     volumes:
       - ./tor_keys:/var/lib/tor
     depends_on:
