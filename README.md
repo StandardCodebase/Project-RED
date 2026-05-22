@@ -1,3 +1,4 @@
+
 # Project R.E.D
 
 ## Sovereign Knowledge Node Engine
@@ -12,54 +13,53 @@ The internet is broken not from a lack of information, but from a fundamental cr
 
 While noble in its intent to provide universal free education, the BLUE System suffers from structural flaws that guarantee its immediate compromise or destruction:
 
-- **The Single Point of Failure:** By attempting to gather all technical knowledge onto a single domain , the Blue System creates an existential target for corporate lawfare and state suppression. Proponents suggest fleeing to regulatory havens like Iceland or Switzerland. However, global internet chokepoints do not care about physical server locations. Corporate conglomerates can bypass foreign courts entirely, using international frameworks to enforce global search engine de-indexing and financial blacklisting. A centralized tower of knowledge faces instant death the moment it publishes protected corporate trade secrets.
-    
-- **The Conflict of Interest:** The BLUE System proposes funding its massive infrastructure through "contextual advertising" and dynamically ranked affiliate links to material suppliers. This introduces a fatal architectural flaw. The moment a platform's revenue is derived from a percentage of material sales, its neutrality is permanently compromised. Authors and verifiers become financially incentivized to mandate expensive, specific corporate parts rather than teaching users how to utilize recycled scraps or open-source alternatives. Furthermore, dynamic ranking systems are immediate targets for corporate review-bombing bots, rendering them useless.
-    
-- **The Jury-Style Delusion:** Relying on an uncompensated "jury" of randomly selected expert verifiers to audit complex technical workflows is an economic fantasy. Highly specialized engineers, mechanics, and developers profit directly from keeping their operational execution exclusive; it is their livelihood. They will not donate dozens of uncompensated hours to grade random submissions out of pure altruism.
-    
-- **The Dependency Hell of Linear Hierarchies:** Forcing all human knowledge into a rigid, linear hierarchy where Level 4 strictly depends on Level 1 creates a catastrophic maintenance bottleneck. In engineering, environments change dynamically. If a single foundational Level 1 tool or software version becomes obsolete, the entire structural integrity of the upper tiers collapses.
-    
-- **The Paradox of the "Spin-Off":** The BLUE System mandates exactly _one definitive guide_ per topic to prevent clutter. Yet, to resolve internal human disputes, it paradoxically suggests a "spin-off system" where contested guides fork into separate versions. This structural contradiction fragments the platform into competing, redundant tutorials, recreating the exact chaotic, unorganized internet it claimed to replace.
-    
+- **The Single Point of Failure:** By attempting to gather all technical knowledge onto a single domain, the Blue System creates an existential target for corporate lawfare and state suppression.
+- **The Conflict of Interest:** The moment a platform's revenue is derived from a percentage of material sales via affiliate links, its neutrality is permanently compromised.
+- **The Jury-Style Delusion:** Relying on an uncompensated "jury" of randomly selected expert verifiers to audit complex technical workflows is an economic fantasy.
+- **The Dependency Hell of Linear Hierarchies:** Forcing all human knowledge into a rigid, linear hierarchy where Level 4 strictly depends on Level 1 creates a catastrophic maintenance bottleneck.
 
 ### The R.E.D Correction: Rejecting the Centralized Silo
 
-Project R.E.D. explicitly rejects the concept of a master website. More importantly, **we reject the reliance on centralized corporate forums (e.g., Reddit, Discord, Lemmy)** as permanent curation layers. These modern town squares are bound by corporate partnerships, profit incentives, and systemic human moderation biases that inevitably sanitize, manipulate, or monetize data.
+Project R.E.D. explicitly rejects the concept of a master website. More importantly, **we reject the reliance on centralized corporate forums** as permanent curation layers. 
 
 Knowledge cannot be trusted to a boardroom or a single database. It must be scattered so thoroughly across the crust of the earth that it cannot be stamped out. R.E.D. replaces the fragile, centralized tower with an indestructible, decentralized mesh of sovereign nodes and cryptographic trust networks.
 
-## 2. Architecture
+## 2. Architecture: The Dual-Tier Deployment
 
-```
-+-------------------------------------------------------+
-|                 Sovereign Docker Node                 |
-|                                                       |
-|   +-------------------+        +------------------+   |
-|   |  Go Web Engine    | ---->  | /data Directory  |   |
-|   |  * Goldmark HTML  |        | * Raw .md files  |   |
-|   |  * SHA-256 Hasher |        | * Static Images  |   |
-|   +---------+---------+        +------------------+   |
-+-------------|-----------------------------------------+
-              | Serves Content Over HTTPS
-              v
-+-------------------------------------------------------+
-|            Decentralized Curation Layer               |
-|      (Web-of-Trust, Nostr Relays, PGP Index Feeds)     |
-|                                                       |
-|   * Peer-to-Peer Cryptographic Content Review         |
-|   * Immutable Version Indexing (via Hash Verification) |
-|   * Signed Public-Key Web-of-Trust Resource Lists     |
-+-------------------------------------------------------+
-```
+Project R.E.D operates via a highly secure, dual-tier Docker network topology. It separates public "Clearnet" knowledge from restricted "Darknet" knowledge using strict Docker network isolation.
 
-### Key Mechanisms:
+```text
+GLOBAL INTERNET & TOR NETWORK
+       │                   │
+  [Port 80/443]       [Tor Network Bridge]
+       │                   │
++------▼-------+    +------▼------------------+
+| Caddy Proxy  |    | Tor Sidecar Container   |
++------┬-------+    +------┬---------┬--------+
+       │                   │         │
+[Clearnet-Tier Network]    │    [Onion-Tier Network (Internal)]
+       │                   │         │
++------▼-------+           │  +------▼-------+
+|  Light Node  |           │  |  Dark Node   |
+| (Go Engine)  |           │  | (Go Engine)  |
++------┬-------+           │  +------┬-------+
+       │                   │         │
+       +----------+        │         |
+                  │        │         │
+               +--▼--------▼---------▼--+
+               |   Host Volume (/data)  |
+               | - /public              |
+               | - /restricted          |
+               +------------------------+
+````
 
-- **Stateless Web Routing:** No database layer (SQL/NoSQL) exists to be corrupted, breached, or subpoenaed. This minimizes attack vectors and state corruption vulnerabilities.
+### Key Security Mechanisms:
+
+- **Stateless Web Routing:** No database layer (SQL/NoSQL) exists to be corrupted, breached, or subpoenaed.
     
-- **Cryptographic Validation:** The engine computes a standard SHA-256 hash over the raw file bytes on demand, injecting it into response headers (`X-RED-Content-Hash`) and embedded layout templates.
+- **Cryptographic Validation:** The engine computes a standard SHA-256 hash over the raw file bytes on demand, injecting it into response headers (`X-RED-Content-Hash`).
     
-- **Separation of Concerns:** The software handles nothing but state boundaries and input sanitization. Human peer networks manage moderation, indexing, and reputation entirely off-chain and out-of-band through cryptographic identity.
+- **Air-Gapped Vault:** The `Dark Node` lives on a strictly internal Docker network. It has zero outbound internet access. The `Tor Sidecar` acts as the exclusive cryptographic bridge, publishing the hidden service descriptor to the global Tor network while routing incoming requests securely to the Vault.
     
 
 ## 3. Technical Stack Blueprint
@@ -68,7 +68,7 @@ Knowledge cannot be trusted to a boardroom or a single database. It must be scat
     
 - **Markdown Parser:** `goldmark` — Highly efficient, fully CommonMark compliant.
     
-- **Container Environment:** Multi-stage minimal Docker pipeline (`alpine` or `scratch`) for complete process isolation and instant replication.
+- **Container Environment:** Multi-stage minimal Docker pipeline (`alpine`) for complete process isolation and instant replication.
     
 
 ## 4. Local Quickstart (From Scratch)
@@ -86,33 +86,15 @@ Bash
 
 ```
 # Set up directory structural blocks
-mkdir -p templates static data
+mkdir -p templates static data/public data/restricted
 
 # Initialize module tracking and download dependencies
 go mod init red-engine
-go get github.com/yuin/goldmark
-go get github.com/adrg/frontmatter
+go get [github.com/yuin/goldmark](https://github.com/yuin/goldmark)
+go get [github.com/adrg/frontmatter](https://github.com/adrg/frontmatter)
 ```
 
-### Local Dev Verification Loop
-
-Add a markdown documentation file containing structured front-matter metadata to `./data/test-guide.md`:
-
-YAML
-
-```
----
-title: "Emergency Diagnostic Protocol"
-author_identity: "red://7f3a2c...b821"
-created_at: 2026-05-21
-discussion_hub: "nostr://npub1... or signed-feed://address"
----
-# Diagnostic Protocol
-
-Raw content text goes here.
-```
-
-Execute the engine natively:
+Execute the engine natively for local testing:
 
 Bash
 
@@ -120,45 +102,42 @@ Bash
 go run main.go
 ```
 
-Navigate to `http://localhost:8080/guides/test-guide` on your browser to test the local deployment.
+Navigate to `http://localhost:8080/guides/...` on your browser to test the local deployment.
 
 ## 5. Production Deployment Pipeline
 
-### Build the Optimized Binary Container Image
+Project R.E.D is designed to be deployed using `docker-compose`, which spins up both the Clearnet Gateway and the Onion Vault simultaneously.
+
+### 1. Structure Your Data
+
+Because the nodes operate on different access tiers, you must divide your Markdown files into the respective subdirectories on your host machine. The containers will only look in their assigned folders:
+
+- **Clearnet Node:** Place files in `./data/public/`
+    
+- **Dark Node:** Place files in `./data/restricted/`
+    
+
+### 2. Launch the Matrix
+
+Bring up the entire stack in detached mode:
 
 Bash
 
 ```
-docker build -t project-red-node:latest .
+docker-compose up -d --build
 ```
 
-### Spin Up the Active Background Process
+### 3. Retrieve Your Onion Address
 
-Bind your host system's data directory directly into the isolated engine container environment using the appropriate volume syntax:
-
-**On Mac / Linux:**
+The Tor sidecar will automatically generate cryptographic keys and a `.onion` address upon its first boot. To find out where your Vault is being hosted, run:
 
 Bash
 
 ```
-docker run -d \
-  -p 8080:8080 \
-  -v "$(pwd)/data:/root/data" \
-  --name red_node \
-  project-red-node:latest
+cat ./tor_keys/hostname
 ```
 
-**On Windows (PowerShell):**
-
-PowerShell
-
-```
-docker run -d \
-  -p 8080:8080 \
-  -v "${PWD}/data:/root/data" \
-  --name red_node \
-  project-red-node:latest
-```
+_(Note: It may take 5-10 minutes for a newly generated V3 hidden service to propagate fully across the global Tor directory.)_
 
 ## 6. Simulating Knowledge Base Structures
 
@@ -168,29 +147,25 @@ Plaintext
 
 ```
 data/
-└── solar-array-build/
-    ├── 00-index.md
-    ├── 01-wiring-schematics-v1.0.md
-    ├── 01-wiring-schematics-v2.0-lfp.md
-    └── 02-inverter-fusing.md
+└── restricted/
+    └── solar-array-build/
+        ├── 00-index.md
+        ├── 01-wiring-schematics-v1.0.md
+        └── 02-inverter-fusing.md
 ```
 
 The node pathing mechanics resolve these automatically into accessible downstream routes:
 
-- `http://localhost:8080/guides/solar-array-build/00-index`
-    
-- `http://localhost:8080/guides/solar-array-build/01-wiring-schematics-v2.0-lfp`
+- `http://<your-onion>.onion/guides/solar-array-build/00-index`
     
 
 ## 7. Curation Philosophy: The Sovereign Web-of-Trust
 
-1. **The Software Only Knows State:** The Go runtime handles zero moderation logic. It treats strings objectively. Its single security responsibility is checking path boundaries and verifying content integrity.
+1. **The Software Only Knows State:** The Go runtime handles zero moderation logic. It treats strings objectively.
     
-2. **The Abolition of Centralized Forums:** R.E.D. rejects community hubs that can be bought, coerced, or algorithmically manipulated. Trust is shifted entirely to a decentralized Web-of-Trust (WoT).
+2. **Cryptographic Peer Review:** Instead of relying on a centralized platform's voting buttons, users and curators sign content hashes with their independent cryptographic keys (PGP/Nostr).
     
-3. **Cryptographic Peer Review:** Instead of relying on a centralized platform's voting buttons, users and curators sign content hashes with their independent cryptographic keys (PGP/Nostr). If a guide contains bad engineering practices or dangerous inaccuracies, curators publish a signed revocation or warning attached to that file's SHA-256 hash.
-    
-4. **End-User Agency:** You, the reader, choose which curators to trust. Your local index client aggregates links signed by your trusted network. If a corporate actor attempts to inject fake data or modify a file on a node, the cryptographic payload fingerprint mismatch causes immediate validation failure.
+3. **End-User Agency:** You, the reader, choose which curators to trust. Your local index client aggregates links signed by your trusted network.
     
 
 The creator of the Blue System lamented that he lacked the millions of dollars needed for a startup, resigning himself to the belief that his vision would never be a reality. He failed because he thought like a corporate founder seeking capital.
