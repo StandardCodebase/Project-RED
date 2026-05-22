@@ -1,0 +1,75 @@
+version: "3.8"
+
+networks:
+  clearnet-tier:
+    driver: bridge
+  onion-tier:
+    internal: true
+
+services:
+  # ==========================================
+  # NODE 1: THE CLEARNET GATEWAY (LIGHT)
+  # ==========================================
+  red_light_node:
+    build: .
+    container_name: red_light_node
+    restart: unless-stopped
+    networks:
+      - clearnet-tier
+    environment:
+      - RED_NODE_NAME=Clearnet-Gateway-01
+      - RED_PORT=8080
+      - RED_DATA_DIR=/root/data/public
+    volumes:
+      - ./data:/root/data:ro
+
+  caddy_proxy:
+    image: caddy:latest
+    container_name: caddy_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - clearnet-tier
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - red_light_node
+
+  # ==========================================
+  # NODE 2: THE ONION VAULT (DARK)
+  # ==========================================
+  red_dark_node:
+    build: .
+    container_name: red_dark_node
+    restart: unless-stopped
+    networks:
+      - onion-tier
+    environment:
+      - RED_NODE_NAME=Onion-Vault-Secure
+      - RED_PORT=9090
+      - RED_DATA_DIR=/root/data/restricted
+    volumes:
+      - ./data:/root/data:ro
+
+  tor_sidecar:
+    image: goldy/tor-hidden-service:latest
+    container_name: tor_sidecar
+    restart: unless-stopped
+    networks:
+      - onion-tier
+    links:
+      - red_dark_node
+    environment:
+      RED_DARK_NODE_TOR_SERVICE_HOSTS: "80:red_dark_node:9090"
+    volumes:
+      - ./tor_keys:/var/lib/tor
+    depends_on:
+      - red_dark_node
+
+volumes:
+  caddy_data:
+  caddy_config:

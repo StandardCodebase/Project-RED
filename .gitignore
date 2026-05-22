@@ -1,3 +1,8 @@
 data/
 .DS_Store
 Thumbs.db
+
+tor_keys/
+caddy_data/
+caddy_config/
+Caddyfile
