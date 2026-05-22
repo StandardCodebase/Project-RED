@@ -83,7 +83,7 @@ Upon its first boot, the Tor sidecar generates a brand new V3 hidden service add
 To reveal your Vault's `.onion` link, run:
 
 ```bash
-cat ./tor_keys/hostname
+docker-compose exec tor_sidecar cat /var/lib/tor/hidden_service/vault/hostname
 
 ```
 
