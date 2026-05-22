@@ -33,20 +33,51 @@
         <main class="node-container">
             <section class="metadata-ribbon">
                 <div class="meta-item">
-                    <span class="label">AUTHOR:</span>
-                    <span class="value identity">{{ .AuthorIdentity }}</span>
+                    <span class="label">AUTHORS:</span>
+                    <span class="value identity">
+                        {{- range $i, $author := .Authors -}} {{- if $i }}, {{
+                        end -}} {{- $author -}} {{- end -}}
+                    </span>
                 </div>
+
+                {{ if .Contributors }}
+                <div class="meta-item">
+                    <span class="label">CONTRIBUTORS:</span>
+                    <span class="value"
+                        >{{ range .Contributors }}{{ . }} {{ end }}</span
+                    >
+                </div>
+                {{ end }}
+
                 <div class="meta-item">
                     <span class="label">CREATED:</span>
                     <span class="value">{{ .CreatedAt }}</span>
                 </div>
+
+                {{ if .UpdatedAt }}
+                <div class="meta-item">
+                    <span class="label">UPDATED:</span>
+                    <span class="value">{{ .UpdatedAt }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="label">LAST EDITOR:</span>
+                    <span class="value identity">{{ .LastEditor }}</span>
+                </div>
+                {{ end }}
+
                 <div class="meta-item">
                     <span class="label">SHA-256:</span>
                     <span class="value hash">{{ .ContentHash }}</span>
                 </div>
+
                 <div class="meta-item">
                     <span class="label">DOWNLOAD:</span>
-                    <a href="/download/{{ .ContentPath }}" class="download-link" download>📄 Markdown Source</a>
+                    <a
+                        href="/download/{{ .ContentPath }}"
+                        class="download-link"
+                        download
+                        >📄 Markdown Source</a
+                    >
                 </div>
             </section>
 
@@ -78,14 +109,12 @@
             const toggleBtn = document.getElementById("theme-toggle");
             const html = document.documentElement;
 
-            // Check local storage or default to dark
             const savedTheme = localStorage.getItem("red-theme") || "dark";
             html.setAttribute("data-theme", savedTheme);
 
             toggleBtn.addEventListener("click", () => {
                 const currentTheme = html.getAttribute("data-theme");
                 const newTheme = currentTheme === "dark" ? "light" : "dark";
-
                 html.setAttribute("data-theme", newTheme);
                 localStorage.setItem("red-theme", newTheme);
             });

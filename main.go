@@ -17,18 +17,21 @@ import (
 )
 
 type PostMetadata struct {
-	Title          string `yaml:"title"`
-	AuthorIdentity string `yaml:"author_identity"`
-	CreatedAt      string `yaml:"created_at"`
-	DiscussionHub  string `yaml:"discussion_hub"`
+	Title         string   `yaml:"title"`
+	Authors       []string `yaml:"authors"`      // list of primary authors
+	Contributors  []string `yaml:"contributors"` // optional additional contributors
+	CreatedAt     string   `yaml:"created_at"`
+	UpdatedAt     string   `yaml:"updated_at"`
+	LastEditor    string   `yaml:"last_editor"`
+	DiscussionHub string   `yaml:"discussion_hub"`
 }
 
 type PageData struct {
-	PostMetadata
-	NodeName    string
-	ContentHash string
-	ContentPath string // e.g., "solar-array-build/00-index" (without .md)
-	HTMLContent template.HTML
+	PostMetadata // embedded – provides Title, Author, Contributors, etc.
+	NodeName     string
+	ContentHash  string
+	ContentPath  string
+	HTMLContent  template.HTML
 }
 
 // Configurable state
@@ -37,7 +40,6 @@ var (
 	DataDir  string
 	Port     string
 
-	// Pre-parsed template
 	indexTemplate *template.Template
 )
 
@@ -59,18 +61,15 @@ func init() {
 }
 
 func main() {
-	// Parse template once
 	var err error
 	indexTemplate, err = template.ParseFiles("templates/layout.html")
 	if err != nil {
 		log.Fatalf("Failed to parse template: %v", err)
 	}
 
-	// Static files
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	// Health check endpoint
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -80,7 +79,6 @@ func main() {
 	http.HandleFunc("/guides/", handleRenderGuide)
 	http.HandleFunc("/download/", handleDownloadGuide)
 
-	// Configure server with timeouts
 	srv := &http.Server{
 		Addr:         ":" + Port,
 		ReadTimeout:  5 * time.Second,
@@ -94,7 +92,6 @@ func main() {
 	}
 }
 
-// secureJoin ensures the requested path cannot escape DataDir.
 func secureJoin(baseDir, requestedPath string) (string, error) {
 	baseAbs, err := filepath.Abs(baseDir)
 	if err != nil {
@@ -110,7 +107,6 @@ func secureJoin(baseDir, requestedPath string) (string, error) {
 	return targetAbs, nil
 }
 
-// readFileWithContext reads a file while respecting request cancellation.
 func readFileWithContext(ctx context.Context, path string) ([]byte, error) {
 	type result struct {
 		data []byte
@@ -189,7 +185,7 @@ func handleRenderGuide(w http.ResponseWriter, r *http.Request) {
 		PostMetadata: meta,
 		NodeName:     NodeName,
 		ContentHash:  hashString,
-		ContentPath:  cleanedPath, // store for download link
+		ContentPath:  cleanedPath,
 		HTMLContent:  template.HTML(buf.String()),
 	}
 
