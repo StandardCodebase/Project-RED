@@ -59,6 +59,11 @@ Centralized sites are easy targets for DDoS attacks and corporate subpoenas beca
 * The R.E.D. engine is **stateless**. It possesses no database layer to exploit, breach, corrupt, or subpoena.
 * Because it serves raw Markdown natively from file storage, it operates with minimal memory overhead and zero database lookup latency. If a specific gateway node faces a DDoS attack, it can be instantly replicated across alternative hidden services or IP addresses using the automated multi-stage minimal Docker pipeline.
 
+### D. Instant Decentralized Mirroring (The Import API)
+A sovereign network is only as strong as its ability to replicate data rapidly. 
+* R.E.D. features a built-in `/import` ingestion endpoint. 
+* Node operators can pass any raw Markdown URL to the engine. The Go runtime will instantly fetch the file, automatically reconstruct the origin server's folder hierarchy on the local drive, and instantly serve it without requiring a server restart. This allows networks of nodes to rapidly mirror critical data before a master source is taken offline.
+
 ---
 
 ## 4. Architecture: The Dual-Tier Deployment

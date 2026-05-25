@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{ .Title }} | Project R.E.D</title>
-        <link rel="stylesheet" href="/static/style.css" />
+        <link rel="stylesheet" href="/static/style.css?v=3" />
         <meta property="og:title" content="{{ .Title }}" />
         <meta property="og:type" content="article" />
         <meta
@@ -14,11 +14,55 @@
         <meta property="og:meta_hash" content="{{ .ContentHash }}" />
     </head>
     <body>
+        <div id="side-panel-overlay" class="side-panel-overlay"></div>
+        <aside id="side-panel" class="side-panel">
+            <div
+                style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 2rem;
+                "
+            >
+                <h3 style="font-size: 1rem; color: var(--text-secondary)">
+                    AVAILABLE GUIDES
+                </h3>
+                <button
+                    id="close-panel"
+                    style="
+                        background: none;
+                        border: none;
+                        color: var(--text-primary);
+                        font-size: 1.5rem;
+                        cursor: pointer;
+                    "
+                >
+                    ✕
+                </button>
+            </div>
+            <div id="side-guide-list" class="side-guide-list"></div>
+        </aside>
         <header class="node-header">
             <div class="header-container">
-                <div class="brand">
-                    <h1>Project R.E.D</h1>
-                    <span class="node-badge">Node: {{ .NodeName }}</span>
+                <div style="display: flex; align-items: center; gap: 1rem">
+                    <button
+                        id="menu-toggle"
+                        aria-label="Open Guides Menu"
+                        style="
+                            background: transparent;
+                            border: none;
+                            color: var(--text-primary);
+                            font-size: 1.5rem;
+                            cursor: pointer;
+                            padding: 0;
+                        "
+                    >
+                        ☰
+                    </button>
+                    <div class="brand">
+                        <h1>Project R.E.D</h1>
+                        <span class="node-badge">Node: {{ .NodeName }}</span>
+                    </div>
                 </div>
                 <button
                     id="theme-toggle"
@@ -118,6 +162,96 @@
                 html.setAttribute("data-theme", newTheme);
                 localStorage.setItem("red-theme", newTheme);
             });
+            // Side Panel Logic
+            const panel = document.getElementById("side-panel");
+            const overlay = document.getElementById("side-panel-overlay");
+            const menuBtn = document.getElementById("menu-toggle");
+            const closeBtn = document.getElementById("close-panel");
+            const guideList = document.getElementById("side-guide-list");
+
+            async function loadGuidesForPanel() {
+                guideList.innerHTML =
+                    '<span style="color: var(--text-secondary)">Scanning files...</span>';
+                try {
+                    const res = await fetch("/manifest");
+                    const data = await res.json();
+
+                    if (Object.keys(data).length === 0) {
+                        guideList.innerHTML =
+                            '<span style="color: var(--text-secondary)">No guides found in data directory.</span>';
+                        return;
+                    }
+
+                    // 1. Group the files by their parent folder
+                    const groups = {};
+                    for (const [path, info] of Object.entries(data)) {
+                        // Split path (e.g., "qt-6/basics/signals" -> ["qt-6", "basics", "signals"])
+                        const parts = path.split("/");
+                        // If it's in a folder, use the folder name. Otherwise, put it in "General"
+                        const folderName =
+                            parts.length > 1
+                                ? parts[parts.length - 2]
+                                : "General";
+
+                        if (!groups[folderName]) {
+                            groups[folderName] = [];
+                        }
+                        groups[folderName].push({
+                            path: path,
+                            title: info.title,
+                        });
+                    }
+
+                    // 2. Generate the HTML structure (The "QTreeView")
+                    let finalHtml = "";
+                    for (const [folder, files] of Object.entries(groups)) {
+                        finalHtml += `
+                                    <div class="panel-folder">
+                                        <div class="panel-folder-header" onclick="toggleFolderBox(this)">
+                                            <span>📂</span> <span style="text-transform: uppercase; font-weight: bold;">${folder}</span>
+                                        </div>
+                                        <div class="panel-folder-content">
+                                    `;
+
+                        // Add the individual files inside the folder box
+                        for (const file of files) {
+                            // Using the default icon. Change to your <img> tag if you added logos!
+                            finalHtml += `<a href="/guides/${file.path}" class="panel-link">📄 ${file.title}</a>`;
+                        }
+
+                        finalHtml += `</div></div>`; // Close content and folder divs
+                    }
+
+                    guideList.innerHTML = finalHtml;
+                } catch (e) {
+                    guideList.innerHTML =
+                        '<span style="color: var(--accent-color)">Failed to fetch manifest.</span>';
+                }
+            }
+
+            // Function to handle the collapse/expand animation
+            function toggleFolderBox(headerElement) {
+                const contentBox = headerElement.nextElementSibling;
+                contentBox.classList.toggle("open");
+
+                // Swap the folder icon from closed to open
+                const icon = headerElement.querySelector("span");
+                if (contentBox.classList.contains("open")) {
+                    icon.textContent = "📂";
+                } else {
+                    icon.textContent = "📁";
+                }
+            }
+
+            function togglePanel() {
+                const isOpen = panel.classList.toggle("open");
+                overlay.classList.toggle("open");
+                if (isOpen) loadGuidesForPanel();
+            }
+
+            menuBtn.addEventListener("click", togglePanel);
+            closeBtn.addEventListener("click", togglePanel);
+            overlay.addEventListener("click", togglePanel);
         </script>
     </body>
 </html>

@@ -218,3 +218,108 @@ body {
 .download-link:hover {
     text-decoration: underline;
 }
+/* --- Off-Canvas Side Panel --- */
+.side-panel {
+    position: fixed;
+    top: 0;
+    left: -320px;
+    width: 300px;
+    height: 100vh;
+    background-color: var(--bg-secondary);
+    border-right: 2px solid var(--border-color);
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    padding: 1.5rem;
+    overflow-y: auto;
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
+}
+
+.side-panel.open {
+    left: 0;
+}
+
+.side-panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 999;
+}
+
+.side-panel-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.side-guide-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.panel-link {
+    color: var(--text-primary);
+    text-decoration: none;
+    padding: 0.75rem 1rem;
+    border: 1px solid transparent;
+    background-color: var(--bg-primary);
+    transition: all 0.15s ease;
+    font-size: 0.9rem;
+    word-break: break-word;
+}
+
+.panel-link:hover {
+    border-color: var(--border-color);
+    color: var(--accent-color);
+}
+
+/* --- Side Panel Folder Accordions --- */
+.panel-folder {
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+}
+
+.panel-folder-header {
+    padding: 0.75rem 1rem;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    user-select: none; /* Prevents text highlighting when rapidly clicking */
+    border-bottom: 1px solid transparent;
+    transition: background-color 0.15s ease;
+}
+
+.panel-folder-header:hover {
+    background-color: var(--border-color);
+    color: var(--bg-primary);
+}
+
+.panel-folder-content {
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    padding: 0.5rem 0;
+}
+
+/* When the JavaScript adds the 'open' class, this overriding rule takes effect */
+.panel-folder-content.open {
+    display: flex;
+    border-top: 1px dashed var(--border-color);
+}
+
+.panel-folder-content .panel-link {
+    border: none; /* Remove the border from individual links since they are inside a box now */
+    padding: 0.5rem 1rem 0.5rem 2rem; /* Indent the files slightly for a hierarchy effect */
+}

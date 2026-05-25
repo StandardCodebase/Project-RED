@@ -4,10 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"html/template"
+	"io"
 	"log"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,6 +64,74 @@ func init() {
 	}
 }
 
+// 1. Fetch from URL and automatically assign directory based on the URL path
+func handleImportURL(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	targetURL := r.FormValue("url")
+	if targetURL == "" {
+		http.Error(w, "Missing url parameter", http.StatusBadRequest)
+		return
+	}
+
+	parsed, err := url.Parse(targetURL)
+	if err != nil {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	// Automatically build directory structure: /data/domain.com/path/to/
+	dirPath := filepath.Join(DataDir, parsed.Host, filepath.Dir(parsed.Path))
+	fileName := filepath.Base(parsed.Path)
+	if !strings.HasSuffix(fileName, ".md") {
+		fileName += ".md" // Ensure it's saved as markdown
+	}
+
+	if err := os.MkdirAll(dirPath, 0755); err != nil {
+		http.Error(w, "Failed to create directories", http.StatusInternalServerError)
+		return
+	}
+
+	resp, err := http.Get(targetURL)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		http.Error(w, "Failed to fetch content from URL", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	outPath := filepath.Join(dirPath, fileName)
+	outFile, err := os.Create(outPath)
+	if err != nil {
+		http.Error(w, "Failed to write file", http.StatusInternalServerError)
+		return
+	}
+	defer outFile.Close()
+
+	io.Copy(outFile, resp.Body)
+	w.Write([]byte("Successfully imported guide to: " + filepath.Join(parsed.Host, parsed.Path)))
+}
+
+// 2. Dynamically scan directories to populate the side panel
+func handleManifest(w http.ResponseWriter, r *http.Request) {
+	guides := make(map[string]map[string]string)
+	filepath.Walk(DataDir, func(path string, info os.FileInfo, err error) error {
+		if err == nil && !info.IsDir() && strings.HasSuffix(info.Name(), ".md") {
+			relPath, _ := filepath.Rel(DataDir, path)
+			relPath = strings.TrimSuffix(relPath, ".md")
+
+			// Use the filename as the default title for the side panel
+			guides[relPath] = map[string]string{"title": filepath.Base(relPath)}
+		}
+		return nil
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(guides)
+}
+
 func main() {
 	var err error
 	indexTemplate, err = template.ParseFiles("templates/layout.html")
@@ -79,6 +150,8 @@ func main() {
 
 	http.HandleFunc("/guides/", handleRenderGuide)
 	http.HandleFunc("/download/", handleDownloadGuide)
+	http.HandleFunc("/import", handleImportURL)
+	http.HandleFunc("/manifest", handleManifest)
 
 	srv := &http.Server{
 		Addr:         ":" + Port,
