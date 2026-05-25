@@ -182,54 +182,92 @@
                         return;
                     }
 
-                    // 1. Group the files by their parent folder
-                    const groups = {};
-                    for (const [path, info] of Object.entries(data)) {
-                        // Split path (e.g., "qt-6/basics/signals" -> ["qt-6", "basics", "signals"])
-                        const parts = path.split("/");
-                        // If it's in a folder, use the folder name. Otherwise, put it in "General"
-                        const folderName =
-                            parts.length > 1
-                                ? parts[parts.length - 2]
-                                : "General";
+                    // 1. Build a deep, recursive tree structure
+                    const root = { _files: [], _folders: {} };
 
-                        if (!groups[folderName]) {
-                            groups[folderName] = [];
+                    for (const [path, info] of Object.entries(data)) {
+                        const parts = path.split("/");
+                        const fileName = parts.pop(); // Pop off the markdown file itself
+
+                        let currentLevel = root;
+
+                        // Traverse the path and build subfolders if they don't exist yet
+                        for (const folder of parts) {
+                            if (!currentLevel._folders[folder]) {
+                                currentLevel._folders[folder] = {
+                                    _files: [],
+                                    _folders: {},
+                                };
+                            }
+                            currentLevel = currentLevel._folders[folder];
                         }
-                        groups[folderName].push({
+
+                        // Place the file strictly inside its exact nested folder
+                        currentLevel._files.push({
                             path: path,
                             title: info.title,
                         });
                     }
 
-                    // 2. Generate the HTML structure (The "QTreeView")
-                    // 2. Generate the HTML structure (Inside your layout.html script tag)
-                    let finalHtml = "";
-                    for (const [folder, files] of Object.entries(groups)) {
-                        finalHtml += `
-                                    <div class="panel-folder">
-                                        <div class="panel-folder-header" onclick="toggleFolderBox(this)">
-                                            <span class="folder-icon"></span> <span style="text-transform: uppercase; font-weight: bold;">${folder}</span>
-                                        </div>
-                                        <div class="panel-folder-content">
-                                    `;
+                    // 2. Recursive function to generate the nested HTML layout
+                    function buildHtmlTree(node, isRoot = true) {
+                        let html = "";
 
-                        // Add the individual files inside the folder box
-                        for (const file of files) {
-                            finalHtml += `<a href="/guides/${file.path}" class="panel-link"> ${file.title}</a>`;
+                        // Catch any "General" files that sit at the absolute root of the directory
+                        if (isRoot && node._files.length > 0) {
+                            for (const file of node._files) {
+                                html += `<a href="/guides/${file.path}" class="panel-link">📄 ${file.title}</a>`;
+                            }
                         }
 
-                        finalHtml += `</div></div>`;
+                        // Loop through all folders at this current level
+                        for (const [folderName, childNode] of Object.entries(
+                            node._folders,
+                        )) {
+                            // If it's a subfolder, remove the outer border so we don't get ugly "boxes inside boxes"
+                            const folderStyle = isRoot
+                                ? ""
+                                : "border: none; margin-bottom: 0; margin-left: 0.5rem; border-left: 1px dashed rgba(56, 189, 248, 0.2); border-radius: 0;";
+
+                            html += `
+                                            <div class="panel-folder" style="${folderStyle}">
+                                                <div class="panel-folder-header" onclick="toggleFolderBox(this)">
+                                                    <span class="folder-icon"></span> <span style="text-transform: uppercase; font-weight: bold; font-size: 0.8rem;">${folderName}</span>
+                                                </div>
+                                                <div class="panel-folder-content">
+                                        `;
+
+                            // Re-run the function continuously for infinite levels of subfolders
+                            html += buildHtmlTree(childNode, false);
+
+                            html += `</div></div>`;
+                        }
+
+                        // Append the files that belong inside this specific subfolder
+                        if (!isRoot) {
+                            for (const file of node._files) {
+                                html += `<a href="/guides/${file.path}" class="panel-link"> ${file.title}</a>`;
+                            }
+                        }
+
+                        return html;
                     }
-                    guideList.innerHTML = finalHtml;
+
+                    // 3. Inject the final recursive HTML into the sidebar
+                    guideList.innerHTML = buildHtmlTree(root, true);
                 } catch (e) {
                     guideList.innerHTML =
                         '<span style="color: var(--accent-color)">Failed to fetch manifest.</span>';
+                    console.error(e);
                 }
             }
 
             // Function to handle the collapse/expand animation
+            // Function to handle the collapse/expand animation
             function toggleFolderBox(headerElement) {
+                // Add this line to track the rotation state of the specific header clicked
+                headerElement.classList.toggle("active");
+
                 const contentBox = headerElement.nextElementSibling;
                 contentBox.classList.toggle("open");
             }

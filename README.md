@@ -68,31 +68,40 @@ A sovereign network is only as strong as its ability to replicate data rapidly.
 
 Project R.E.D operates via a highly secure, dual-tier Docker network topology. It separates public "Clearnet" knowledge from restricted "Darknet" knowledge using strict Docker network isolation.
 
-```text
-GLOBAL INTERNET & TOR NETWORK
-       │                   │
-  [Port 80/443]       [Tor Network Bridge]
-       │                   │
-+------▼-------+    +------▼------------------+
-| Caddy Proxy  |    | Tor Sidecar Container   |
-+------┬-------+    +------┬---------┬--------+
-       │                   │         │
-[Clearnet-Tier Network]    │    [Onion-Tier Network (Internal)]
-       │                   │         │
-+------▼-------+           │  +------▼-------+
-|  Light Node  |           │  |  Dark Node   |
-| (Go Engine)  |           │  | (Go Engine)  |
-+------┬-------+           │  +------┬-------+
-       │                   │         │
-       +----------+        │         |
-                  │        │         │
-               +--▼--------▼---------▼--+
-               |   Host Volume (/data)  |
-               | - /public              |
-               | - /restricted          |
-               +------------------------+
+```mermaid
+graph TD
+    %% External Origins
+    Inet((Global Internet))
+    TorNet((Tor Network))
 
+    %% Proxies / Ingress
+    Inet -- "Port 80/443" --> Caddy[Caddy Proxy]
+    TorNet -- "Tor Network Bridge" --> TorSidecar[Tor Sidecar Container]
+
+    %% Network Tiers & Nodes
+    Caddy -- "Clearnet-Tier Network" --> LightNode["Light Node<br/>(Go Engine)"]
+    TorSidecar -- "Onion-Tier Network<br/>(Internal)" --> DarkNode["Dark Node<br/>(Go Engine)"]
+
+    %% Volume & Data Connections
+    Volume[/"Host Volume (/data)<br/>- /public<br/>- /restricted"\]
+    
+    LightNode --> Volume
+    DarkNode --> Volume
+    TorSidecar --> Volume
+
+    %% Styling classes for better visual distinction
+    classDef external fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef proxy fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef node fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    classDef storage fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+
+    class Inet,TorNet external;
+    class Caddy,TorSidecar proxy;
+    class LightNode,DarkNode node;
+    class Volume storage;
 ```
+
+
 
 ### Key Security Mechanisms:
 

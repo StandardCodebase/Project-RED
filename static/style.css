@@ -251,12 +251,16 @@ body {
     line-height: 1.6;
 }
 
+/* --- Centered Visual Assets --- */
+
 .markdown-body img {
+    display: block; /* Forces the image to sit on its own line */
+    margin: 1.5rem auto; /* The 'auto' on the left/right centers the image */
     max-width: 100%;
     height: auto;
     border-radius: 6px;
     border: 1px solid rgba(56, 189, 248, 0.15);
-    margin: 1.5rem 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Optional: adds slight depth */
 }
 
 /* --- Social Curation Footer Box --- */
@@ -436,8 +440,7 @@ body {
     border-color: currentColor;
 }
 
-/* When the parent container opens, rotate the abstract arrow downward smoothly */
-.panel-folder:has(.panel-folder-content.open) .folder-icon {
+.panel-folder-header.active .folder-icon {
     transform: rotate(135deg);
 }
 
@@ -455,4 +458,17 @@ body {
 
 .panel-folder-content .panel-link {
     padding: 0.5rem 0.8rem 0.5rem 1.5rem;
+}
+.mermaid {
+    display: flex; /* Turns the container into a flexbox */
+    justify-content: center; /* Centers the generated vector SVG inside */
+    align-items: center;
+    width: 100%;
+    max-width: 100%;
+    background-color: var(--bg-base);
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 2rem auto; /* Centers the container itself */
+    overflow-x: auto;
 }
