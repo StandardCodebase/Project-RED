@@ -161,6 +161,6 @@ For community‑driven verification, publish the hash of a trusted version on an
 
 ## Next Steps
 
-- Join the Project R.E.D. Discord (link in main README).
 - Set up your own node and start writing guides.
 - Help others by verifying hashes and discussing content.
+- No heroes are coming. **Claim your agency.**
