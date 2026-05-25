@@ -41,8 +41,10 @@ body {
         color 0.15s ease;
 }
 
+/* WIDENED CONTAINER: Upgraded for widescreen visual assets */
 .node-container {
-    max-width: 850px;
+    width: 94%;
+    max-width: 1600px;
     margin: 0 auto;
     padding: 0 1.5rem;
 }
@@ -55,8 +57,10 @@ body {
     padding: 1rem 0;
 }
 
+/* WIDENED HEADER: Aligned to match the layout width edges */
 .header-container {
-    max-width: 850px;
+    width: 94%;
+    max-width: 1600px;
     margin: 0 auto;
     padding: 0 1.5rem;
     display: flex;
@@ -157,6 +161,12 @@ body {
     margin-bottom: 1.25rem;
 }
 
+.markdown-body img {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 1.5rem;
+}
+
 .markdown-body code {
     background-color: var(--code-bg);
     padding: 0.2rem 0.4rem;
@@ -165,17 +175,19 @@ body {
 }
 
 .markdown-body pre {
-    background-color: var(--code-bg);
-    padding: 1rem;
-    overflow-x: auto;
-    border: 1px solid var(--border-color);
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
+    line-height: 1.8; /* INCREASES VERTICAL SPACE: Prevents multi-line rows from colliding */
 }
 
 .markdown-body pre code {
-    background-color: transparent;
-    padding: 0;
-    border: none;
+    background-color: var(--code-bg);
+    padding: 0.1rem 0.4rem; /* REDUCED VERTICAL PADDING: Stops box boundaries from stretching too far */
+    font-size: 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 3px; /* OPTIONAL: Smooths out the sharp corners slightly */
+    display: inline-block; /* FORCES ALIGNMENT: Ensures the container respects line bounds */
+    line-height: 1.2; /* KEEPS BOX COMPACT: Locks the bounding box height inside the sentence text */
+    vertical-align: middle; /* CENTERS ALIGNMENT: Aligns the code box cleanly with surrounding plain text */
 }
 
 /* --- Social Curation Footer --- */
@@ -218,6 +230,7 @@ body {
 .download-link:hover {
     text-decoration: underline;
 }
+
 /* --- Off-Canvas Side Panel --- */
 .side-panel {
     position: fixed;
@@ -297,7 +310,7 @@ body {
     gap: 0.5rem;
     font-size: 0.85rem;
     letter-spacing: 0.05em;
-    user-select: none; /* Prevents text highlighting when rapidly clicking */
+    user-select: none;
     border-bottom: 1px solid transparent;
     transition: background-color 0.15s ease;
 }
@@ -308,18 +321,25 @@ body {
 }
 
 .panel-folder-content {
-    display: none; /* Hidden by default */
+    display: none;
     flex-direction: column;
     padding: 0.5rem 0;
 }
 
-/* When the JavaScript adds the 'open' class, this overriding rule takes effect */
 .panel-folder-content.open {
     display: flex;
     border-top: 1px dashed var(--border-color);
 }
 
 .panel-folder-content .panel-link {
-    border: none; /* Remove the border from individual links since they are inside a box now */
-    padding: 0.5rem 1rem 0.5rem 2rem; /* Indent the files slightly for a hierarchy effect */
+    border: none;
+    padding: 0.5rem 1rem 0.5rem 2rem;
+}
+
+/* --- Dynamic Render Asset Classes --- */
+.mermaid {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
 }
