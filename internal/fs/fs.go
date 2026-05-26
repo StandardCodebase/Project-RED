@@ -26,21 +26,9 @@ func SecureJoin(baseDir, requestedPath string) (string, error) {
 }
 
 func ReadFileWithContext(ctx context.Context, path string) ([]byte, error) {
-	type result struct {
-		data []byte
-		err  error
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
-
-	ch := make(chan result, 1)
-	go func() {
-		data, err := os.ReadFile(path)
-		ch <- result{data, err}
-	}()
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case r := <-ch:
-		return r.data, r.err
-	}
+	
+	return os.ReadFile(path)
 }
