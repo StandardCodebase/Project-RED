@@ -11,5 +11,5 @@ tor_keys/
 caddy_data/
 caddy_config/
 caddy_routing/
-
+.github/
 *.log
