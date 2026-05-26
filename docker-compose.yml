@@ -31,15 +31,25 @@ services:
     networks:
       - clearnet-tier
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy_routing:/etc/caddy
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - red_light_node
-
+    # Fixed routing block that forces Caddy to explicitly bind global HTTP traffic
+    command: >
+      /bin/sh -c '
+      if [ ! -f /etc/caddy/Caddyfile ]; then
+        echo "Generating default Caddyfile..."
+        echo "http://localhost:80, http://127.0.0.1:80, http://red_light_node {" > /etc/caddy/Caddyfile
+        echo "    reverse_proxy red_light_node:8080" >> /etc/caddy/Caddyfile
+        echo "}" >> /etc/caddy/Caddyfile
+      fi;
+      caddy run --config /etc/caddy/Caddyfile --adapter caddyfile'
   # ==========================================
   # NODE 2: THE ONION VAULT (DARK)
   # ==========================================
+  #
   red_dark_node:
     build: .
     container_name: red_dark_node
@@ -58,6 +68,7 @@ services:
     container_name: tor_sidecar
     restart: unless-stopped
     networks:
+      - clearnet-tier
       - onion-tier
     links:
       - red_dark_node

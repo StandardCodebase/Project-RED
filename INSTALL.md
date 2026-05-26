@@ -146,8 +146,7 @@ mkdir data\restricted
 > *Drop your curated `.md` files directly into these directories before proceeding.*
 
 #### 3. Domain Mapping (Optional)
-
-Modify the project `Caddyfile` configuration block to reflect your personal domain or staging endpoints.
+Modify the project `caddy_routing/Caddyfile` configuration block to reflect your personal domain or staging endpoints.
 
 #### 4. Spin Up the Daemon Pipeline
 

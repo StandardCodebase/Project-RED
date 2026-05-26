@@ -81,11 +81,41 @@ func (n *Node) Manifest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (n *Node) RenderGuide(w http.ResponseWriter, r *http.Request) {
+
+	func (n *Node) RenderGuide(w http.ResponseWriter, r *http.Request) {
+		// --- 1. NEW: Intercept static resources automatically ---
+		ext := strings.ToLower(filepath.Ext(r.URL.Path))
+		isResource := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp" || ext == ".svg" || ext == ".pdf"
+
+		if isResource {
+			n.serveResource(w, r)
+			return
+		}
+		// --- END NEW ---
+
+		// 2. Existing markdown routing logic continues seamlessly below...
+		path, ok := n.resolveGuidePath(w, r, "/guides/")
+		if !ok {
+			return
+		}
+		raw, ok := n.readGuide(w, r, path)func (n *Node) RenderGuide(w http.ResponseWriter, r *http.Request) {
+		// --- 1. NEW: Intercept static resources automatically ---
+		ext := strings.ToLower(filepath.Ext(r.URL.Path))
+		isResource := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp" || ext == ".svg" || ext == ".pdf"
+
+		if isResource {
+			n.serveResource(w, r)
+			return
+		}
+
+		// 2. markdown routing logic continues seamlessly below...
+
 	path, ok := n.resolveGuidePath(w, r, "/guides/")
 	if !ok {
 		return
 	}
 	raw, ok := n.readGuide(w, r, path)
+
 	if !ok {
 		return
 	}
@@ -169,4 +199,27 @@ func (n *Node) readGuide(w http.ResponseWriter, r *http.Request, path string) ([
 		return nil, false
 	}
 	return raw, true
+}
+
+func (n *Node) serveResource(w http.ResponseWriter, r *http.Request) {
+	requested := strings.TrimPrefix(r.URL.Path, "/guides/")
+	cleaned := filepath.Clean(requested)
+
+	// Path traversal protection
+	if cleaned == "." || strings.HasPrefix(cleaned, "..") || strings.Contains(cleaned, string(os.PathSeparator)+"..") {
+		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		return
+	}
+
+	//NO ".md" is appended here
+	resolved, err := redfs.SecureJoin(n.Cfg.DataDir, cleaned)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		return
+	}
+
+	// Optional but highly recommended: Cache images on the reader's browser
+	// for 24 hours to drastically reduce bandwidth costs for Node Operators.
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	http.ServeFile(w, r, resolved)
 }
