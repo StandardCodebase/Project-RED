@@ -81,41 +81,20 @@ func (n *Node) Manifest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (n *Node) RenderGuide(w http.ResponseWriter, r *http.Request) {
+	// 1. Intercept static resources (images, PDFs, etc.)
+	ext := strings.ToLower(filepath.Ext(r.URL.Path))
+	isResource := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp" || ext == ".svg" || ext == ".pdf"
+	if isResource {
+		n.serveResource(w, r)
+		return
+	}
 
-	func (n *Node) RenderGuide(w http.ResponseWriter, r *http.Request) {
-		// --- 1. NEW: Intercept static resources automatically ---
-		ext := strings.ToLower(filepath.Ext(r.URL.Path))
-		isResource := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp" || ext == ".svg" || ext == ".pdf"
-
-		if isResource {
-			n.serveResource(w, r)
-			return
-		}
-		// --- END NEW ---
-
-		// 2. Existing markdown routing logic continues seamlessly below...
-		path, ok := n.resolveGuidePath(w, r, "/guides/")
-		if !ok {
-			return
-		}
-		raw, ok := n.readGuide(w, r, path)func (n *Node) RenderGuide(w http.ResponseWriter, r *http.Request) {
-		// --- 1. NEW: Intercept static resources automatically ---
-		ext := strings.ToLower(filepath.Ext(r.URL.Path))
-		isResource := ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp" || ext == ".svg" || ext == ".pdf"
-
-		if isResource {
-			n.serveResource(w, r)
-			return
-		}
-
-		// 2. markdown routing logic continues seamlessly below...
-
+	// 2. Markdown routing logic
 	path, ok := n.resolveGuidePath(w, r, "/guides/")
 	if !ok {
 		return
 	}
 	raw, ok := n.readGuide(w, r, path)
-
 	if !ok {
 		return
 	}
