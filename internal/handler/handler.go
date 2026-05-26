@@ -271,10 +271,22 @@ func (n *Node) ImportRemoteGuide(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Fetch the remote file
-	resp, err := http.Get(req.URL)
+	// 2. Fetch the remote file (with bot-detection bypass)
+	fetchReq, err := http.NewRequest(http.MethodGet, req.URL, nil)
+	if err != nil {
+		http.Error(w, "Failed to build request", http.StatusInternalServerError)
+		return
+	}
+
+	// Spoof a standard browser to bypass WAFs and bot blockers
+	fetchReq.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+	// Use a custom client with a timeout (best practice to prevent server hangs)
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(fetchReq)
+
 	if err != nil || resp.StatusCode != http.StatusOK {
-		http.Error(w, "Failed to fetch remote guide", http.StatusBadGateway)
+		http.Error(w, "Failed to fetch remote guide: remote server blocked the request", http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
@@ -316,4 +328,55 @@ func (n *Node) ImportRemoteGuide(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Successfully synced to remote/" + safeName))
+}
+
+// Add this at the bottom of internal/handler/handler.go
+
+func (n *Node) SyncGuideOnStartup(remoteURL string, filename string) {
+	log.Printf("Startup Sync: Fetching %s...", filename)
+
+	// 1. Build the request with bot-bypass headers
+	req, err := http.NewRequest(http.MethodGet, remoteURL, nil)
+	if err != nil {
+		log.Printf("Startup Sync Error: %v", err)
+		return
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+	// 2. Execute the request
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		log.Printf("Startup Sync Error: Could not reach remote server (Status: %v)", resp.StatusCode)
+		return
+	}
+	defer resp.Body.Close()
+
+	// 3. Ensure the remote directory exists
+	remoteDir := filepath.Join(n.Cfg.DataDir, "remote")
+	if err := os.MkdirAll(remoteDir, 0755); err != nil {
+		log.Printf("Startup Sync Error: Could not create directory: %v", err)
+		return
+	}
+
+	// 4. Save the file to disk
+	targetPath := filepath.Join(remoteDir, filename)
+	outFile, err := os.Create(targetPath)
+	if err != nil {
+		log.Printf("Startup Sync Error: Could not write to disk: %v", err)
+		return
+	}
+	defer outFile.Close()
+
+	if _, err = io.Copy(outFile, resp.Body); err != nil {
+		log.Printf("Startup Sync Error: Stream copy failed: %v", err)
+		return
+	}
+
+	// 5. Invalidate the memory cache so the UI sees it immediately
+	cacheMutex.Lock()
+	manifestCache = nil
+	cacheMutex.Unlock()
+
+	log.Printf("Startup Sync: Successfully downloaded %s", filename)
 }

@@ -29,16 +29,24 @@ func main() {
 		IndexTemplate: idxTmpl,
 	}
 
+	// ==========================================
+	// HARDCODED STARTUP SYNC TEST
+	// Automatically fetch the Git documentation on boot
+	// ==========================================
+	node.SyncGuideOnStartup(
+		"https://raw.githubusercontent.com/git/git/master/README.md",
+		"auto-startup-git-guide.md",
+	)
+
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	mux.HandleFunc("/health", node.Health)
-	mux.HandleFunc("/import", node.ImportRemoteGuide)
+	mux.HandleFunc("/import", node.ImportRemoteGuide) // <-- Keep this one
 	mux.HandleFunc("/manifest", node.Manifest)
 	mux.HandleFunc("/guides/", node.RenderGuide)
 	mux.HandleFunc("/source/", node.ViewSource)
 	mux.HandleFunc("/download/", node.DownloadGuide)
 	mux.HandleFunc("/", node.Index)
-	mux.HandleFunc("/import", node.ImportRemoteGuide)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
