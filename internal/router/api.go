@@ -9,7 +9,7 @@ func (h *handler) health(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"status": "ok",
-		"site":   h.siteName,
+		"site":   h.cfg.SiteName, // <-- CHANGED HERE
 	})
 }
 

@@ -35,7 +35,7 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	d := pageData{
-		Site:   h.siteName,
+		Site:   h.cfg.SiteName,
 		Nav:    h.store.Root(),
 		Path:   path,
 		TopCat: topCat,
@@ -43,7 +43,8 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case path == "/":
-		d.Body = template.HTML(`<div class="article"><h1>` + h.siteName + `</h1><p>The free practical knowledge base. Choose a topic from the sidebar.</p></div>`)
+
+		d.Body = template.HTML(`<div class="article"><h1>` + h.cfg.SiteName + `</h1><p>The free practical knowledge base. Choose a topic from the sidebar.</p></div>`)
 
 	case len(parts) == 1 && topCat != "":
 		sec, ok := h.store.Root()[topCat]

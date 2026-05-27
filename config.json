@@ -2,6 +2,9 @@
   "addr": ":8080",
   "siteName": "RED Engine Multi-Sync",
   "dataDir": "/app/data",
+  "sourceURL": "",
+  "sourceType": "",
+  "adminToken": "my-super-secret-password-123",
   "startupSync": [
     {
       "url": "https://raw.githubusercontent.com/yuin/goldmark/master/README.md",
@@ -14,6 +17,10 @@
     {
       "url": "https://raw.githubusercontent.com/golang/go/master/README.md",
       "filename": "golang-readme.md"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/divmain/GitSavvy/master/README.md",
+      "filename": "community-sync-20260527153537.md"
     }
   ]
 }
