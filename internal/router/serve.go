@@ -16,13 +16,16 @@ type crumb struct {
 }
 
 type pageData struct {
-	Site   string
-	Nav    map[string]*store.Section
-	Body   template.HTML
-	Title  string
-	Path   string
-	TopCat string
-	Crumb  []crumb
+	Site     string
+	Nav      map[string]*store.Section
+	Body     template.HTML
+	Title    string
+	Path     string
+	TopCat   string
+	Crumb    []crumb
+	Verified bool
+	Author   string
+	Hash     string
 }
 
 func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
@@ -54,16 +57,19 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 		d.Crumb = []crumb{{Label: capitalize(topCat), Path: "/" + topCat}}
 		d.Body = template.HTML(sectionHTML(sec))
 
+
 	default:
-		art := h.store.Get(path)
-		if art == nil {
-			http.NotFound(w, r)
-			return
-		}
-		d.Title = capitalize(parts[len(parts)-1])
-		d.Crumb = buildCrumbs(parts)
-		d.Body = art.Body
-	}
+    art := h.store.Get(path)
+    if art == nil {
+        http.NotFound(w, r)
+        return
+    }
+    d.Title = capitalize(parts[len(parts)-1])
+    d.Crumb = buildCrumbs(parts)
+    d.Body = art.Body
+    d.Verified = art.Verified   // from store.Article
+    d.Author = art.Author
+    d.Hash = art.Hash
 
 	if err := h.tmpl.ExecuteTemplate(w, "base.html", d); err != nil {
 		http.Error(w, "template error: "+err.Error(), 500)
@@ -72,9 +78,9 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 }
 
 func sectionHTML(sec *store.Section) string {
+
 	var b strings.Builder
 	b.Grow(1024)
-
 	b.WriteString(`<div class="section-index"><h1>`)
 	b.WriteString(capitalize(sec.Name))
 	b.WriteString(`</h1><ul>`)
