@@ -1,7 +1,19 @@
 {
-  "source_url": "https://github.com/yourname/red-knowledge/archive/refs/heads/main.tar.gz",
-  "source_type": "tar.gz",
-  "data_dir": "./data",
   "addr": ":8080",
-  "site_name": "RED"
+  "siteName": "RED Engine Multi-Sync",
+  "dataDir": "/app/data",
+  "startupSync": [
+    {
+      "url": "https://raw.githubusercontent.com/yuin/goldmark/master/README.md",
+      "filename": "goldmark-docs.md"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/RED-Collective/red-engine/main/README.md",
+      "filename": "red-engine-readme.md"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/golang/go/master/README.md",
+      "filename": "golang-readme.md"
+    }
+  ]
 }

@@ -101,3 +101,7 @@ func titleFromFilename(name string) string {
 	}
 	return strings.ToUpper(name[:1]) + name[1:]
 }
+
+func (s *Store) DataDir() string {
+	return s.dataDir
+}

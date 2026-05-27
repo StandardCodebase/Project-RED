@@ -1,0 +1,3 @@
+:80 {
+    reverse_proxy red_engine:8080
+}

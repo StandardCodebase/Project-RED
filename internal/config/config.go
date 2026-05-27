@@ -5,31 +5,46 @@ import (
 	"os"
 )
 
+type RemoteSync struct {
+	URL      string `json:"url"`
+	Filename string `json:"filename"`
+}
+
 type Config struct {
-	SourceURL  string `json:"source_url"`
-	SourceType string `json:"source_type"`
-	DataDir    string `json:"data_dir"`
-	Addr       string `json:"addr"`
-	SiteName   string `json:"site_name"`
+	Addr        string       `json:"addr"`
+	SiteName    string       `json:"siteName"`
+	DataDir     string       `json:"dataDir"`
+	SourceURL   string       `json:"sourceURL"`
+	SourceType  string       `json:"sourceType"`  // e.g., "tar.gz", "zip"
+	AdminToken  string       `json:"adminToken"`  // NEW: Security Token
+	StartupSync []RemoteSync `json:"startupSync"` // Ported from Legacy Gateway
 }
 
-func Load(path string) (*Config, error) {
-	f, err := os.Open(path)
+func Default() Config {
+	return Config{
+		Addr:     ":8080",
+		SiteName: "RED Engine",
+		DataDir:  "./data",
+	}
+}
+
+func Load(path string) (Config, error) {
+	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return Config{}, err
 	}
-	defer f.Close()
-
-	cfg := &Config{}
-	return cfg, json.NewDecoder(f).Decode(cfg)
+	var cfg Config
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
 }
 
-func Default() *Config {
-	return &Config{
-		SourceURL:  "https://github.com/yourname/red-knowledge/archive/refs/heads/main.tar.gz",
-		SourceType: "tar.gz",
-		DataDir:    "./data",
-		Addr:       ":8080",
-		SiteName:   "RED",
+// NEW: Allows the application to save changes back to disk
+func (c *Config) Save(path string) error {
+	b, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return err
 	}
+	return os.WriteFile(path, b, 0644)
 }

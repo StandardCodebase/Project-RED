@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>RED Engine Admin</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                background: #1a1a1a;
+                color: #fff;
+                display: flex;
+                justify-content: center;
+                padding-top: 10vh;
+            }
+            .card {
+                background: #2a2a2a;
+                padding: 2rem;
+                border-radius: 8px;
+                width: 100%;
+                max-width: 400px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            }
+            h1 {
+                margin-top: 0;
+                color: #ff4757;
+            }
+            label {
+                display: block;
+                margin: 1rem 0 0.5rem;
+                font-size: 0.9rem;
+                color: #aaa;
+            }
+            input[type="text"],
+            input[type="password"] {
+                width: 100%;
+                padding: 0.75rem;
+                border: 1px solid #444;
+                border-radius: 4px;
+                background: #111;
+                color: white;
+                box-sizing: border-box;
+            }
+            .checkbox-group {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-top: 1rem;
+            }
+            button {
+                margin-top: 1.5rem;
+                width: 100%;
+                padding: 0.75rem;
+                background: #ff4757;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            button:hover {
+                background: #ff6b81;
+            }
+            #status {
+                margin-top: 1rem;
+                font-size: 0.9rem;
+                text-align: center;
+            }
+            .success {
+                color: #2ed573;
+            }
+            .error {
+                color: #ff4757;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h1>Node Administration</h1>
+
+            <label>Admin Token</label>
+            <input
+                type="password"
+                id="token"
+                placeholder="Enter token from config.json"
+                required
+            />
+
+            <label>Remote Markdown URL</label>
+            <input
+                type="text"
+                id="url"
+                placeholder="https://raw.githubusercontent.com/..."
+                required
+            />
+
+            <label>Filename (Optional)</label>
+            <input type="text" id="filename" placeholder="guide.md" />
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="saveState" checked />
+                <label style="margin: 0"
+                    >Save to config.json (Startup Sync)</label
+                >
+            </div>
+
+            <button onclick="syncGuide()">Sync Guide</button>
+            <div id="status"></div>
+        </div>
+
+        <script>
+            async function syncGuide() {
+                const status = document.getElementById("status");
+                const token = document.getElementById("token").value;
+                const payload = {
+                    url: document.getElementById("url").value,
+                    filename: document.getElementById("filename").value,
+                    saveToStartup: document.getElementById("saveState").checked,
+                };
+
+                status.textContent = "Syncing...";
+                status.className = "";
+
+                try {
+                    const response = await fetch("/-/import", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Admin-Token": token,
+                        },
+                        body: JSON.stringify(payload),
+                    });
+
+                    const text = await response.text();
+                    if (response.ok) {
+                        status.textContent = text;
+                        status.className = "success";
+                        document.getElementById("url").value = "";
+                    } else {
+                        status.textContent = "Error: " + text;
+                        status.className = "error";
+                    }
+                } catch (err) {
+                    status.textContent = "Network error connecting to node.";
+                    status.className = "error";
+                }
+            }
+        </script>
+    </body>
+</html>
