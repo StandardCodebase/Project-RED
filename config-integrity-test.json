@@ -1,0 +1,9 @@
+{
+  "addr": ":9999",
+  "siteName": "RED Engine Integrity Test",
+  "dataDir": "data/remote/API",
+  "sourceURL": "",
+  "sourceType": "",
+  "adminToken": "test-token-12345",
+  "startupSync": null
+}

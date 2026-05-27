@@ -55,13 +55,33 @@ type Contributor struct {
 }
 
 type ManifestEntry struct {
-	Hash      string `json:"hash"`
+	FileHash  string `json:"file_hash"`
+	Hash      string `json:"hash"` // Fallback support
 	PublicKey string `json:"public_key"`
 	Signature string `json:"signature"`
 }
 
+// Manifest can be either wrapped {"files": {...}} or flat {filepath: {...}}
 type Manifest struct {
 	Files map[string]ManifestEntry `json:"files"`
+}
+
+// Helper to unmarshal flexible manifest format
+func parseManifestJSON(data []byte) map[string]ManifestEntry {
+	result := make(map[string]ManifestEntry)
+	
+	// Try wrapped format first
+	var wrapped Manifest
+	if err := json.Unmarshal(data, &wrapped); err == nil && len(wrapped.Files) > 0 {
+		return wrapped.Files
+	}
+	
+	// Try flat format: {filepath: entry, ...}
+	if err := json.Unmarshal(data, &result); err == nil {
+		return result
+	}
+	
+	return result
 }
 
 func (s *Store) Reload() error {
@@ -81,15 +101,15 @@ func (s *Store) Reload() error {
 	}
 
 	// 2. Pre-load all signatures from any manifest.json in the data directory
+	// Map by filepath for easier lookup
 	allSignatures := make(map[string]ManifestEntry)
 	filepath.WalkDir(s.dataDir, func(path string, d fs.DirEntry, err error) error {
 		if err == nil && !d.IsDir() && filepath.Base(path) == "manifest.json" {
 			if manifestData, err := os.ReadFile(path); err == nil {
-				var manifest Manifest
-				if err := json.Unmarshal(manifestData, &manifest); err == nil {
-					for _, entry := range manifest.Files {
-						allSignatures[entry.Hash] = entry
-					}
+				manifest := parseManifestJSON(manifestData)
+				// Map entries by filepath
+				for filepath, entry := range manifest {
+					allSignatures[filepath] = entry
 				}
 			}
 		}
@@ -121,23 +141,36 @@ func (s *Store) Reload() error {
 		isVerified := false
 		authorName := "Unverified / Unknown Origin"
 
-		if entry, exists := allSignatures[fileHash]; exists {
-			// Does the signature belong to a trusted public key?
-			if trustedAuthor, isTrusted := trustedKeys[strings.ToLower(entry.PublicKey)]; isTrusted {
-				pubBytes, err1 := hex.DecodeString(entry.PublicKey)
-				sigBytes, err2 := hex.DecodeString(entry.Signature)
+		// Get relative path in the format used in manifest
+		rel, _ := filepath.Rel(s.dataDir, path)
+		relativePath := strings.TrimPrefix(filepath.ToSlash(rel), "/")
 
-				if err1 == nil && err2 == nil && len(pubBytes) == ed25519.PublicKeySize {
-					if ed25519.Verify(pubBytes, content, sigBytes) {
-						isVerified = true
-						authorName = trustedAuthor
+		// Try to find manifest entry by filepath
+		if entry, exists := allSignatures[relativePath]; exists {
+			// Use file_hash if available, otherwise hash
+			entryHash := entry.FileHash
+			if entryHash == "" {
+				entryHash = entry.Hash
+			}
+
+			// Does the hash match?
+			if entryHash == fileHash {
+				// Does the signature belong to a trusted public key?
+				if trustedAuthor, isTrusted := trustedKeys[strings.ToLower(entry.PublicKey)]; isTrusted {
+					pubBytes, err1 := hex.DecodeString(entry.PublicKey)
+					sigBytes, err2 := hex.DecodeString(entry.Signature)
+
+					if err1 == nil && err2 == nil && len(pubBytes) == ed25519.PublicKeySize {
+						if ed25519.Verify(pubBytes, content, sigBytes) {
+							isVerified = true
+							authorName = trustedAuthor
+						}
 					}
 				}
 			}
 		}
 
 		// 5. Build Article Structure
-		rel, _ := filepath.Rel(s.dataDir, path)
 		parts := strings.Split(filepath.ToSlash(rel), "/")
 
 		title := strings.TrimSuffix(parts[len(parts)-1], ".md")

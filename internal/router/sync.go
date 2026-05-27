@@ -71,7 +71,7 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 		pathParts := strings.Split(strings.TrimRight(parsedURL.Path, "/"), "/")
 		if len(pathParts) > 0 {
 			if parsedURL.Host == "github.com" && len(pathParts) >= 3 && pathParts[3] == "archive" {
-				targetSubPath = pathParts[2] // Automatically grabs the "repo" name!
+				targetSubPath = pathParts[2] // Automatically grabs the repo name
 			} else {
 				lastPart := pathParts[len(pathParts)-1]
 				lastPart = strings.TrimSuffix(lastPart, ".zip")
@@ -107,13 +107,14 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// It's a single raw markdown file! Save it cleanly to the specified directory path
+		// if it's a single raw markdown file Save it cleanly to the specified directory path
+		//
 		if err := os.MkdirAll(filepath.Dir(destinationDir), 0755); err != nil {
 			http.Error(w, "Failed to create directory structure", http.StatusInternalServerError)
 			return
 		}
 
-		// Ensure the file itself ends with .md
+		// Checks file extension
 		if !strings.HasSuffix(strings.ToLower(destinationDir), ".md") {
 			destinationDir += ".md"
 			targetSubPath += ".md"

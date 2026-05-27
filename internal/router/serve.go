@@ -28,6 +28,16 @@ type pageData struct {
 	Hash     string
 }
 
+func capitalize(s string) string {
+	s = strings.ReplaceAll(s, "-", " ")
+	s = strings.ReplaceAll(s, "_", " ")
+	if s == "" {
+		return s
+	}
+	r, size := utf8.DecodeRuneInString(s)
+	return string(unicode.ToUpper(r)) + s[size:]
+}
+
 func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(strings.Trim(path, "/"), "/")
@@ -57,30 +67,40 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 		d.Crumb = []crumb{{Label: capitalize(topCat), Path: "/" + topCat}}
 		d.Body = template.HTML(sectionHTML(sec))
 
-
 	default:
-    art := h.store.Get(path)
-    if art == nil {
-        http.NotFound(w, r)
-        return
-    }
-    d.Title = capitalize(parts[len(parts)-1])
-    d.Crumb = buildCrumbs(parts)
-    d.Body = art.Body
-    d.Verified = art.Verified   // from store.Article
-    d.Author = art.Author
-    d.Hash = art.Hash
+		art := h.store.Get(path)
+		if art == nil {
+			http.NotFound(w, r)
+			return
+		}
+		d.Title = capitalize(parts[len(parts)-1])
+		d.Crumb = buildCrumbs(parts)
+		d.Body = art.Body
+		d.Verified = art.Verified
+		d.Author = art.Author
+		d.Hash = art.Hash
+	}
 
 	if err := h.tmpl.ExecuteTemplate(w, "base.html", d); err != nil {
 		http.Error(w, "template error: "+err.Error(), 500)
 		return
 	}
 }
+func buildCrumbs(parts []string) []crumb {
+	crumbs := make([]crumb, 0, len(parts))
+	path := ""
+	for _, p := range parts {
+		path += "/" + p
+		crumbs = append(crumbs, crumb{Label: capitalize(p), Path: path})
+	}
+	return crumbs
+}
 
 func sectionHTML(sec *store.Section) string {
 
 	var b strings.Builder
 	b.Grow(1024)
+
 	b.WriteString(`<div class="section-index"><h1>`)
 	b.WriteString(capitalize(sec.Name))
 	b.WriteString(`</h1><ul>`)
@@ -110,24 +130,4 @@ func sectionHTML(sec *store.Section) string {
 
 	b.WriteString(`</div>`)
 	return b.String()
-}
-
-func buildCrumbs(parts []string) []crumb {
-	crumbs := make([]crumb, 0, len(parts))
-	path := ""
-	for _, p := range parts {
-		path += "/" + p
-		crumbs = append(crumbs, crumb{Label: capitalize(p), Path: path})
-	}
-	return crumbs
-}
-
-func capitalize(s string) string {
-	s = strings.ReplaceAll(s, "-", " ")
-	s = strings.ReplaceAll(s, "_", " ")
-	if s == "" {
-		return s
-	}
-	r, size := utf8.DecodeRuneInString(s)
-	return string(unicode.ToUpper(r)) + s[size:]
 }

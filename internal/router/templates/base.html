@@ -1,128 +1,58 @@
-<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>
-            {{ if .Title }}{{ .Title }} - {{ .Site }}{{ else }}{{ .Site }}{{ end
-            }}
-        </title>
+<div id="wrap">
+    <nav id="sidebar">
+        {{ range $topName, $section := .Nav }}
+        <div class="nav-heading">{{ $section.Name }}</div>
+        <div class="nav-group">
+            {{ range $art := $section.Articles }}
+            <a href="{{ $art.Path }}" class="nav-item">{{ $art.Title }}</a>
+            {{ end }} {{ range $subName, $subSection := $section.Sub }}
+            <div class="nav-sub-heading">{{ $subSection.Name }}</div>
+            {{ range $art := $subSection.Articles }}
+            <a href="{{ $art.Path }}" class="nav-item sub-item"
+                >{{ $art.Title }}</a
+            >
+            {{ end }} {{ end }}
+        </div>
+        {{ end }}
+    </nav>
 
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-            rel="stylesheet"
-        />
-        <link
-            href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"
-            rel="stylesheet"
-        />
-
-        <link rel="stylesheet" href="/static/reset.css" />
-        <link rel="stylesheet" href="/static/layout.css" />
-        <link rel="stylesheet" href="/static/nav.css" />
-        <link rel="stylesheet" href="/static/article.css" />
-    </head>
-    <body>
-        <div id="topbar">
-            <a href="/" id="wordmark">
+    <main id="main">
+        {{ if .Crumb }}
+        <div class="breadcrumb">
+            <a href="/">Home</a>
+            {{ range $i, $c := .Crumb }}
+            <span class="sep">
                 <svg
-                    width="24"
-                    height="24"
+                    width="12"
+                    height="12"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    style="margin-right: 8px; color: #ff4757"
                 >
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+                    <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
-                {{ .Site }}
-            </a>
-            <div class="search-placeholder">Search docs... (Coming Soon)</div>
+            </span>
+            <a href="{{ $c.Path }}">{{ $c.Label }}</a>
+            {{ end }}
+        </div>
+        {{ end }}
+
+        <div class="security-header">
+            {{ if .Verified }}
+            <div class="badge verified">
+                ✅ Verified Contributor: <strong>{{ .Author }}</strong>
+            </div>
+            {{ else }}
+            <div class="badge unverified">⚠️ Unverified / Unknown Origin</div>
+            {{ end }}
         </div>
 
-        <div id="wrap">
-            <nav id="sidebar">
-                {{ range $topName, $section := .Nav }}
-                <div class="nav-heading">{{ $section.Name }}</div>
+        <div class="article-content">{{ .Body }}</div>
 
-                <div class="nav-group">
-                    {{ range $art := $section.Articles }}
-                    <a href="{{ $art.Path }}" class="nav-item"
-                        >{{ $art.Title }}</a
-                    >
-                    {{ end }} {{ range $subName, $subSection := $section.Sub }}
-                    <div class="nav-sub-heading">{{ $subSection.Name }}</div>
-                    {{ range $art := $subSection.Articles }}
-                    <a href="{{ $art.Path }}" class="nav-item sub-item"
-                        >{{ $art.Title }}</a
-                    >
-                    {{ end }} {{ end }}
-                </div>
-                {{ end }}
-            </nav>
-
-            <main id="main">
-                {{ if .Crumb }}
-                <div class="breadcrumb">
-                    <a href="/">Home</a>
-                    {{ range $i, $c := .Crumb }}
-                    <span class="sep">
-                        <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </span>
-                    <a href="{{ $c.Path }}">{{ $c.Label }}</a>
-                    {{ end }}
-                </div>
-                {{ end }}
-
-
-
-                <main id="main">
-                                    {{ if .Crumb }}
-                                    <div class="breadcrumb">
-                                        </div>
-                                    {{ end }}
-
-                                    <div class="security-header">
-                                        {{ if .Verified }}
-                                            <div class="badge verified">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                                                Verified Contributor: {{ .Author }}
-                                            </div>
-                                        {{ else }}
-                                            <div class="badge unverified">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                                                Unverified / Unknown Origin
-                                            </div>
-                                        {{ end }}
-                                    </div>
-
-                                    <div class="article-content">
-                                        {{ .Body }}
-                                    </div>
-
-                                    <div class="hash-footer">
-                                        <span class="hash-label">SHA-256 Checksum:</span>
-                                        <code class="hash-string">{{ .Hash }}</code>
-                                    </div>
-                                </main>
-
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
-    </body>
-</html>
+        <div class="hash-footer">
+            <span class="hash-label">🔐 SHA-256 Checksum:</span>
+            <code class="hash-string" title="File integrity hash">{{ .Hash }}</code>
+        </div>
+    </main>
+</div>
