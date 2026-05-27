@@ -18,6 +18,7 @@ Project R.E.D. (Sovereign Knowledge Node Engine) enters its first public alpha. 
 - **Hierarchical "QTreeView" UI:** Engineered a dynamic JavaScript frontend component that groups flat directory paths from the manifest into collapsible, nested folder accordions.
 - **Off-Canvas Navigation:** Implemented a pure CSS/JS sliding side panel for cross-guide navigation, eliminating the need to return to the root index.
 - **Dual-Tier Docker Matrix:** Published the `docker-compose.yml` for instantly deploying the air-gapped Onion Vault alongside the Clearnet Gateway.
+- **Automated Caddy setup:** Now the container will generate the necessary files every time a new node goes online.
 - **Cryptographic Hashing:** The engine now automatically calculates and serves a strict `X-RED-Content-Hash` (SHA-256) on every request loop to prevent file tampering.
 - **Polarized Theme Engine:** Added native Light/Dark CSS variables scoped to the `:root` level, completely independent of external CSS frameworks.
 
