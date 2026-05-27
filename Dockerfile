@@ -4,7 +4,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -o red-engine main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o red-engine .
 
 # Stage 2: Construct the bare execution container
 FROM alpine:latest
