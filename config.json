@@ -8,27 +8,7 @@
   "startupSync": [
     {
       "url": "https://raw.githubusercontent.com/yuin/goldmark/master/README.md",
-      "filename": "goldmark-docs.md"
-    },
-    {
-      "url": "https://raw.githubusercontent.com/RED-Collective/red-engine/main/README.md",
-      "filename": "red-engine-readme.md"
-    },
-    {
-      "url": "https://raw.githubusercontent.com/golang/go/master/README.md",
-      "filename": "golang-readme.md"
-    },
-    {
-      "url": "https://raw.githubusercontent.com/divmain/GitSavvy/master/README.md",
-      "filename": "community-sync-20260527153537.md"
-    },
-    {
-      "url": "https://raw.githubusercontent.com/golang/go/master/README.md",
-      "filename": "community-sync-20260527155956.md"
-    },
-    {
-      "url": "https://github.com/mundimark/awesome-markdown/archive/refs/heads/master.zip",
-      "filename": "remote/sync-20260527171854"
+      "filename": "remote/sync-20260527174827.md"
     }
   ]
 }

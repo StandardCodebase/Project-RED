@@ -163,7 +163,7 @@ func (h *handler) adminRemove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Filename string `json:"filename"`
+		Filename string `json:"filename"` // <-- FIXED: Lowercase 'n' to match javascript
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
@@ -189,7 +189,7 @@ func (h *handler) adminRemove(w http.ResponseWriter, r *http.Request) {
 	safeName := filepath.Clean(req.Filename)
 	if safeName != "." && safeName != "" && !strings.HasPrefix(safeName, "..") && !filepath.IsAbs(safeName) {
 		fullRemovalPath := filepath.Join(h.store.DataDir(), safeName)
-		os.RemoveAll(fullRemovalPath) // Cleans folders and files instantly
+		os.RemoveAll(fullRemovalPath)
 	}
 
 	// 4. Hot-reload the engine so it vanishes from the UI mapping

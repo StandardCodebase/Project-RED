@@ -225,5 +225,162 @@
                 <ul id="sync-list"></ul>
             </div>
         </div>
+
+        <script>
+            let sessionToken = "";
+
+            // Toggle Password Visibility
+            function toggleVisibility() {
+                const input = document.getElementById("token");
+                const btn = document.getElementById("togglePasswordBtn");
+                if (input.type === "password") {
+                    input.type = "text";
+                    btn.textContent = "Hide";
+                } else {
+                    input.type = "password";
+                    btn.textContent = "Show";
+                }
+            }
+
+            // Authenticate and swap views safely
+            async function login() {
+                const tokenInput = document.getElementById("token").value;
+                const status = document.getElementById("login-status");
+
+                status.textContent = "Verifying with Node...";
+                status.className = "";
+
+                try {
+                    const response = await fetch("/-/admin/config", {
+                        headers: { "X-Admin-Token": tokenInput },
+                    });
+
+                    if (response.ok) {
+                        sessionToken = tokenInput;
+                        document.getElementById("login-view").style.display =
+                            "none";
+                        document.getElementById(
+                            "dashboard-view",
+                        ).style.display = "block";
+
+                        const data = await response.json();
+                        renderList(data);
+                    } else {
+                        status.textContent = "Error: Invalid Admin Token!";
+                        status.className = "error";
+                    }
+                } catch (err) {
+                    status.textContent =
+                        "Server communication failure. Check terminal logs.";
+                    status.className = "error";
+                }
+            }
+
+            // Render active tracking lists
+            function renderList(syncArray) {
+                const list = document.getElementById("sync-list");
+                list.innerHTML = "";
+
+                if (!syncArray || syncArray.length === 0) {
+                    list.innerHTML =
+                        '<li style="justify-content: center; color: #888;">No startup sync hooks configured.</li>';
+                    return;
+                }
+
+                syncArray.forEach((item) => {
+                    const li = document.createElement("li");
+                    li.innerHTML = `
+                        <div class="sync-info">
+                            <strong>${item.filename}</strong>
+                            <span>${item.url}</span>
+                        </div>
+                        <button class="btn-delete" onclick="removeGuide('${item.filename}')">Remove</button>
+                    `;
+                    list.appendChild(li);
+                });
+            }
+
+            // Fire archive imports
+            async function syncGuide() {
+                const status = document.getElementById("status");
+                const payload = {
+                    url: document.getElementById("url").value,
+                    filename: document.getElementById("filename").value,
+                    saveToStartup: document.getElementById("saveState").checked,
+                };
+
+                status.textContent = "Syncing...";
+                status.className = "";
+
+                try {
+                    const response = await fetch("/-/import", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Admin-Token": sessionToken,
+                        },
+                        body: JSON.stringify(payload),
+                    });
+
+                    const text = await response.text();
+                    if (response.ok) {
+                        status.textContent = text;
+                        status.className = "success";
+                        document.getElementById("url").value = "";
+                        document.getElementById("filename").value = "";
+                        refreshList();
+                    } else {
+                        status.textContent = "Error: " + text;
+                        status.className = "error";
+                    }
+                } catch (err) {
+                    status.textContent = "Network error syncing target.";
+                    status.className = "error";
+                }
+            }
+
+            // Drop remote data scopes dynamically
+            async function removeGuide(filename) {
+                if (
+                    !confirm(
+                        `Are you sure you want to remove target tracking for "${filename}"? This will prune assets from system storage.`,
+                    )
+                )
+                    return;
+
+                try {
+                    const response = await fetch("/-/admin/remove", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Admin-Token": sessionToken,
+                        },
+                        body: JSON.stringify({ filename: filename }),
+                    });
+
+                    if (response.ok) {
+                        refreshList();
+                    } else {
+                        alert(
+                            "Prune operation failed: " +
+                                (await response.text()),
+                        );
+                    }
+                } catch (err) {
+                    alert("Network communication fault.");
+                }
+            }
+
+            // Silent status sync background refreshes
+            async function refreshList() {
+                const response = await fetch("/-/admin/config", {
+                    headers: { "X-Admin-Token": sessionToken },
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    renderList(data);
+                }
+            }
+        </script>
     </body>
 </html>

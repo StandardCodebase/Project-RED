@@ -3,375 +3,55 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>RED Engine Admin</title>
-        <style>
-            body {
-                font-family: system-ui, sans-serif;
-                background: #1a1a1a;
-                color: #fff;
-                display: flex;
-                justify-content: center;
-                padding-top: 5vh;
-                padding-bottom: 5vh;
-                margin: 0;
-            }
-            .card {
-                background: #2a2a2a;
-                padding: 2rem;
-                border-radius: 8px;
-                width: 100%;
-                max-width: 500px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            }
-            h1,
-            h2 {
-                margin-top: 0;
-                color: #ff4757;
-            }
-            h2 {
-                font-size: 1.2rem;
-                margin-top: 2rem;
-                border-bottom: 1px solid #444;
-                padding-bottom: 0.5rem;
-            }
-            label {
-                display: block;
-                margin: 1rem 0 0.5rem;
-                font-size: 0.9rem;
-                color: #aaa;
-            }
-
-            /* Input & Toggle Styling */
-            .input-group {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-            input[type="text"],
-            input[type="password"] {
-                flex-grow: 1;
-                padding: 0.75rem;
-                border: 1px solid #444;
-                border-radius: 4px;
-                background: #111;
-                color: white;
-                box-sizing: border-box;
-            }
-            .toggle-btn {
-                background: #444;
-                color: white;
-                border: none;
-                padding: 0.75rem 1rem;
-                border-radius: 4px;
-                cursor: pointer;
-            }
-            .toggle-btn:hover {
-                background: #555;
-            }
-
-            .checkbox-group {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                margin-top: 1rem;
-            }
-            button.primary {
-                margin-top: 1.5rem;
-                width: 100%;
-                padding: 0.75rem;
-                background: #ff4757;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-                cursor: pointer;
-                transition: background 0.2s;
-            }
-            button.primary:hover {
-                background: #ff6b81;
-            }
-
-            #status {
-                margin-top: 1rem;
-                font-size: 0.9rem;
-                text-align: center;
-            }
-            .success {
-                color: #2ed573;
-            }
-            .error {
-                color: #ff4757;
-            }
-
-            /* List Styling */
-            ul {
-                list-style: none;
-                padding: 0;
-                margin: 0;
-            }
-            li {
-                background: #111;
-                border: 1px solid #444;
-                padding: 1rem;
-                margin-bottom: 0.5rem;
-                border-radius: 4px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                word-break: break-all;
-                gap: 1rem;
-            }
-            .sync-info {
-                display: flex;
-                flex-direction: column;
-                font-size: 0.85rem;
-                color: #aaa;
-            }
-            .sync-info strong {
-                color: #fff;
-                font-size: 1rem;
-                margin-bottom: 0.2rem;
-            }
-            .btn-delete {
-                background: #ff4757;
-                color: white;
-                border: none;
-                padding: 0.4rem 0.8rem;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 0.8rem;
-                min-width: 70px;
-            }
-            .btn-delete:hover {
-                background: #ff6b81;
-            }
-
-            #dashboard-view {
-                display: none;
-            }
-        </style>
+        <title>
+            {{ if .Title }}{{ .Title }} - {{ .Site }}{{ else }}{{ .Site }}{{ end
+            }}
+        </title>
+        <link rel="stylesheet" href="/static/reset.css" />
+        <link rel="stylesheet" href="/static/layout.css" />
+        <link rel="stylesheet" href="/static/nav.css" />
+        <link rel="stylesheet" href="/static/article.css" />
     </head>
     <body>
-        <div class="card">
-            <h1>Node Administration</h1>
-
-            <div id="login-view">
-                <label>Admin Token</label>
-                <div class="input-group">
-                    <input
-                        type="password"
-                        id="token"
-                        placeholder="Enter secure token"
-                        required
-                    />
-                    <button
-                        type="button"
-                        class="toggle-btn"
-                        id="togglePasswordBtn"
-                        onclick="toggleVisibility()"
-                    >
-                        Show
-                    </button>
-                </div>
-                <button class="primary" onclick="login()">
-                    Access Dashboard
-                </button>
-                <div id="login-status" class="status"></div>
-            </div>
-
-            <div id="dashboard-view">
-                <p
-                    style="
-                        color: #2ed573;
-                        font-weight: bold;
-                        text-align: center;
-                    "
-                >
-                    ✓ Authenticated
-                </p>
-
-                <h2>Add Remote Guide</h2>
-                <label>Remote Markdown URL</label>
-                <input
-                    type="text"
-                    id="url"
-                    placeholder="https://raw.githubusercontent.com/..."
-                    required
-                />
-
-                <label>Custom Filename (Optional)</label>
-                <input type="text" id="filename" placeholder="guide.md" />
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="saveState" checked />
-                    <label style="margin: 0"
-                        >Save to config.json (Startup Sync)</label
-                    >
-                </div>
-
-                <button class="primary" onclick="syncGuide()">
-                    Import & Sync Guide
-                </button>
-                <div id="status"></div>
-
-                <h2>Currently Synced URLs</h2>
-                <ul id="sync-list"></ul>
-            </div>
+        <div id="topbar">
+            <a href="/" id="wordmark">{{ .Site }}</a>
         </div>
 
-        <script>
-            let sessionToken = "";
+        <div id="wrap">
+            <nav id="sidebar">
+                {{ range $topName, $section := .Nav }}
+                <div class="nav-heading">{{ $section.Name }}</div>
 
-            // Toggle Password Visibility
-            function toggleVisibility() {
-                const input = document.getElementById("token");
-                const btn = document.getElementById("togglePasswordBtn");
-                if (input.type === "password") {
-                    input.type = "text";
-                    btn.textContent = "Hide";
-                } else {
-                    input.type = "password";
-                    btn.textContent = "Show";
-                }
-            }
+                {{ range $art := $section.Articles }}
+                <a href="{{ $art.Path }}" class="nav-item">{{ $art.Title }}</a>
+                {{ end }} {{ range $subName, $subSection := $section.Sub }}
+                <div
+                    class="nav-heading"
+                    style="padding-left: 24px; font-size: 9px; opacity: 0.8"
+                >
+                    ↳ {{ $subSection.Name }}
+                </div>
+                {{ range $art := $subSection.Articles }}
+                <a
+                    href="{{ $art.Path }}"
+                    class="nav-item"
+                    style="padding-left: 34px; font-size: 12.5px"
+                    >{{ $art.Title }}</a
+                >
+                {{ end }} {{ end }} {{ end }}
+            </nav>
 
-            // Authenticate and load dashboard
-            async function login() {
-                const tokenInput = document.getElementById("token").value;
-                const status = document.getElementById("login-status");
-
-                status.textContent = "Verifying...";
-                status.className = "";
-
-                try {
-                    const response = await fetch("/-/admin/config", {
-                        headers: { "X-Admin-Token": tokenInput },
-                    });
-
-                    if (response.ok) {
-                        sessionToken = tokenInput;
-                        document.getElementById("login-view").style.display =
-                            "none";
-                        document.getElementById(
-                            "dashboard-view",
-                        ).style.display = "block";
-
-                        const data = await response.json();
-                        renderList(data);
-                    } else {
-                        status.textContent = "Error: Unauthorized";
-                        status.className = "error";
-                    }
-                } catch (err) {
-                    status.textContent = "Network error connecting to node.";
-                    status.className = "error";
-                }
-            }
-
-            // Render the list of synced URLs
-            function renderList(syncArray) {
-                const list = document.getElementById("sync-list");
-                list.innerHTML = "";
-
-                if (!syncArray || syncArray.length === 0) {
-                    list.innerHTML =
-                        '<li style="justify-content: center; color: #888;">No startup URLs configured.</li>';
-                    return;
-                }
-
-                syncArray.forEach((item) => {
-                    const li = document.createElement("li");
-                    li.innerHTML = `
-                    <div class="sync-info">
-                        <strong>${item.filename}</strong>
-                        <span>${item.url}</span>
-                    </div>
-                    <button class="btn-delete" onclick="removeGuide('${item.filename}')">Remove</button>
-                `;
-                    list.appendChild(li);
-                });
-            }
-
-            // Add a new guide
-            async function syncGuide() {
-                const status = document.getElementById("status");
-                const payload = {
-                    url: document.getElementById("url").value,
-                    filename: document.getElementById("filename").value,
-                    saveToStartup: document.getElementById("saveState").checked,
-                };
-
-                status.textContent = "Syncing...";
-                status.className = "";
-
-                try {
-                    const response = await fetch("/-/import", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-Admin-Token": sessionToken,
-                        },
-                        body: JSON.stringify(payload),
-                    });
-
-                    const text = await response.text();
-                    if (response.ok) {
-                        status.textContent = text;
-                        status.className = "success";
-                        document.getElementById("url").value = "";
-                        document.getElementById("filename").value = "";
-
-                        // Refresh the list silently
-                        refreshList();
-                    } else {
-                        status.textContent = "Error: " + text;
-                        status.className = "error";
-                    }
-                } catch (err) {
-                    status.textContent = "Network error.";
-                    status.className = "error";
-                }
-            }
-
-            // Remove a guide
-            async function removeGuide(filename) {
-                if (
-                    !confirm(
-                        `Are you sure you want to remove ${filename}? This will delete the file.`,
-                    )
-                )
-                    return;
-
-                try {
-                    const response = await fetch("/-/admin/remove", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-Admin-Token": sessionToken,
-                        },
-                        body: JSON.stringify({ filename: filename }),
-                    });
-
-                    if (response.ok) {
-                        refreshList();
-                    } else {
-                        alert("Failed to remove: " + (await response.text()));
-                    }
-                } catch (err) {
-                    alert("Network error.");
-                }
-            }
-
-            // Helper to silently fetch the updated config and re-render
-            async function refreshList() {
-                const response = await fetch("/-/admin/config", {
-                    headers: { "X-Admin-Token": sessionToken },
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    renderList(data);
-                }
-            }
-        </script>
+            <main id="main">
+                {{ if .Crumb }}
+                <div class="breadcrumb">
+                    <a href="/">Home</a>
+                    {{ range $i, $c := .Crumb }}
+                    <span class="sep">/</span>
+                    <a href="{{ $c.Path }}">{{ $c.Label }}</a>
+                    {{ end }}
+                </div>
+                {{ end }} {{ .Body }}
+            </main>
+        </div>
     </body>
 </html>

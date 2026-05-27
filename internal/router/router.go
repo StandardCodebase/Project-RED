@@ -22,11 +22,10 @@ type handler struct {
 }
 
 func New(s *store.Store, cfg *config.Config, cfgPath string) http.Handler {
-	// Isolate base documentation templates
-	tmpl := template.Must(template.New("base").ParseFS(files, "templates/base.html"))
-
-	// Isolate admin dashboard templates completely
-	adminTmpl := template.Must(template.New("admin").ParseFS(files, "templates/admin.html"))
+	// Clean global parsing: automatically maps templates
+	//
+	tmpl := template.Must(template.ParseFS(files, "templates/base.html"))
+	adminTmpl := template.Must(template.ParseFS(files, "templates/admin.html"))
 
 	staticFS, err := fs.Sub(files, "static")
 	if err != nil {
