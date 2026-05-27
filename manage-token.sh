@@ -1,43 +1,77 @@
 #!/bin/bash
-CONFIG_FILE="config.json"
+echo "========================================"
+echo "🚀 Installing RED Engine..."
+echo "========================================"
 
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Error: $CONFIG_FILE not found in the current directory!"
-    exit 1
-fi
+# 1. Check if we are inside the repository; if not, clone it.
+if [ ! -f "docker-compose.yml" ]; then
+    echo "[*] Repository not detected in current directory."
 
-# Extract the current token safely
-CURRENT_TOKEN=$(grep '"adminToken"' "$CONFIG_FILE" | sed -E 's/.*"adminToken"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
-
-echo "----------------------------------------"
-if [ -z "$CURRENT_TOKEN" ]; then
-    echo "Current Admin Token: [NONE / NOT SET]"
-else
-    echo "Current Admin Token: $CURRENT_TOKEN"
-fi
-echo "----------------------------------------"
-echo ""
-
-read -p "Would you like to generate and save a new secure token? (y/N): " choice
-case "$choice" in
-  y|Y )
-    # Generate a secure 24-character random string
-    NEW_TOKEN=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 24 | head -n 1)
-
-    # Safely replace the token in the JSON file
-    if grep -q '"adminToken"' "$CONFIG_FILE"; then
-        sed -i.bak -E 's/("adminToken"[[:space:]]*:[[:space:]]*")[^"]*(")/\1'"$NEW_TOKEN"'\2/' "$CONFIG_FILE"
-        rm -f "$CONFIG_FILE.bak"
-    else
-        echo "Error: 'adminToken' key not found in $CONFIG_FILE. Please add it manually."
+    if ! command -v git &> /dev/null; then
+        echo "❌ Error: 'git' is not installed. Please install git to continue."
         exit 1
     fi
 
-    echo "✅ Token updated successfully!"
-    echo "Your new token is: $NEW_TOKEN"
-    echo "⚠️  Make sure to restart your node: podman-compose restart red_engine"
-    ;;
-  * )
-    echo "Operation cancelled. Token unchanged."
-    ;;
-esac
+    echo "[*] Cloning RED Engine repository..."
+    git clone https://github.com/RED-Collective/red-engine.git
+    if [ $? -ne 0 ]; then
+        echo "❌ Error: Failed to clone repository."
+        exit 1
+    fi
+
+    echo "[*] Navigating into red-engine directory..."
+    cd red-engine || exit 1
+else
+    echo "[*] Running from inside existing repository."
+fi
+
+# 2. Create data directory safely as the standard user (NO SUDO)
+if [ ! -d "./data" ]; then
+    echo "[*] Creating ./data directory..."
+    mkdir -p ./data
+else
+    echo "[*] ./data directory already exists."
+fi
+
+# 3. Check for or create config.json with a secure token
+if [ ! -f "config.json" ]; then
+    echo "[*] Generating default config.json..."
+    # Generate a secure 24-character token
+    NEW_TOKEN=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 24 | head -n 1)
+
+    cat <<EOF > config.json
+{
+  "addr": ":8080",
+  "siteName": "RED Engine",
+  "dataDir": "/app/data",
+  "adminToken": "$NEW_TOKEN",
+  "startupSync": []
+}
+EOF
+    echo "[*] Generated secure Admin Token: $NEW_TOKEN"
+    echo "⚠️  PLEASE SAVE THIS TOKEN! You will need it to log in to the admin panel."
+else
+    echo "[*] config.json already exists. Skipping default generation."
+fi
+
+# 4. Detect the container engine
+if command -v podman-compose &> /dev/null; then
+    COMPOSE_CMD="podman-compose up --build -d"
+elif command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose up --build -d"
+elif command -v docker &> /dev/null && docker compose version &> /dev/null; then
+    COMPOSE_CMD="docker compose up --build -d"
+else
+    echo "❌ Error: Neither podman-compose nor docker compose found on this system."
+    echo "Please install Podman or Docker to continue."
+    exit 1
+fi
+
+echo "[*] Starting RED Engine using container engine..."
+$COMPOSE_CMD
+
+echo "========================================"
+echo "✅ Installation Complete!"
+echo "🌐 Your node is running at: http://localhost"
+echo "⚙️  Admin Panel: http://localhost/-/admin"
+echo "========================================"
