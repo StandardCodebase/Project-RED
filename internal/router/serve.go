@@ -76,27 +76,46 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 		d.Body = template.HTML(`<div class="article">` + result.HTMLContent + `</div>`)
 	}
 
-	if err := h.tmpl.Execute(w, d); err != nil {
-		http.Error(w, "template error", 500)
+	// Change the template execute call at the very bottom of serve.go
+	if err := h.tmpl.ExecuteTemplate(w, "base.html", d); err != nil {
+		http.Error(w, "template error: "+err.Error(), 500)
 		return
 	}
 }
 
 func sectionHTML(sec *store.Section) string {
 	var b strings.Builder
-	b.WriteString(`<div class="section-index"><h1>` + cap(sec.Name) + `</h1>`)
-	b.WriteString(`<ul>`)
+
+	// Pre-grow the builder's internal buffer to prevent runtime re-allocations
+	b.Grow(1024)
+
+	b.WriteString(`<div class="section-index"><h1>`)
+	b.WriteString(cap(sec.Name))
+	b.WriteString(`</h1><ul>`)
+
 	for _, a := range sec.Articles {
-		b.WriteString(`<li><a href="` + a.Path + `">` + a.Title + `</a></li>`)
+		b.WriteString(`<li><a href="`)
+		b.WriteString(a.Path)
+		b.WriteString(`">`)
+		b.WriteString(a.Title)
+		b.WriteString(`</a></li>`)
 	}
 	b.WriteString(`</ul>`)
+
 	for _, sub := range sec.Sub {
-		b.WriteString(`<h2>` + cap(sub.Name) + `</h2><ul>`)
+		b.WriteString(`<h2>`)
+		b.WriteString(cap(sub.Name))
+		b.WriteString(`</h2><ul>`)
 		for _, a := range sub.Articles {
-			b.WriteString(`<li><a href="` + a.Path + `">` + a.Title + `</a></li>`)
+			b.WriteString(`<li><a href="`)
+			b.WriteString(a.Path)
+			b.WriteString(`">`)
+			b.WriteString(a.Title)
+			b.WriteString(`</a></li>`)
 		}
 		b.WriteString(`</ul>`)
 	}
+
 	b.WriteString(`</div>`)
 	return b.String()
 }

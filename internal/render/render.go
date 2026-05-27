@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -16,6 +17,7 @@ type Result struct {
 	Hash        string
 }
 
+// We keep WithUnsafe() so Goldmark renders harmless HTML like <kbd> or <details>.
 var md = goldmark.New(
 	goldmark.WithExtensions(
 		extension.GFM,
@@ -30,8 +32,10 @@ var md = goldmark.New(
 	),
 )
 
+// Created a strict sanitizer policy specifically designed for user-generated content.
+var sanitizer = bluemonday.UGCPolicy()
+
 func Markdown(src string) (*Result, error) {
-	// Re-introduce hashing from the legacy gateway
 	sum := sha256.Sum256([]byte(src))
 	hash := hex.EncodeToString(sum[:])
 
@@ -40,8 +44,11 @@ func Markdown(src string) (*Result, error) {
 		return nil, err
 	}
 
+	// XSS PROTECTION: Sanitize the raw HTML output before returning it to the router
+	safeHTML := sanitizer.Sanitize(buf.String())
+
 	return &Result{
-		HTMLContent: buf.String(),
+		HTMLContent: safeHTML,
 		Hash:        hash,
 	}, nil
 }

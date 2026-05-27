@@ -22,8 +22,11 @@ type handler struct {
 }
 
 func New(s *store.Store, cfg *config.Config, cfgPath string) http.Handler {
-	tmpl := template.Must(template.ParseFS(files, "templates/base.html"))
-	adminTmpl := template.Must(template.ParseFS(files, "templates/admin.html"))
+	// Isolate base documentation templates
+	tmpl := template.Must(template.New("base").ParseFS(files, "templates/base.html"))
+
+	// Isolate admin dashboard templates completely
+	adminTmpl := template.Must(template.New("admin").ParseFS(files, "templates/admin.html"))
 
 	staticFS, err := fs.Sub(files, "static")
 	if err != nil {
@@ -48,15 +51,21 @@ func New(s *store.Store, cfg *config.Config, cfgPath string) http.Handler {
 	mux.HandleFunc("/-/manifest", h.manifest)
 	mux.HandleFunc("/-/source/", h.source)
 	mux.HandleFunc("/-/download/", h.download)
-	// NEW: Secure Admin UI
+
+	// Secure Admin UI & Endpoints
 	mux.HandleFunc("/-/admin", h.adminUI)
+	mux.HandleFunc("/-/admin/config", h.adminConfig)
+	mux.HandleFunc("/-/admin/remove", h.adminRemove)
 
 	return mux
 }
 
 func (h *handler) adminUI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.adminTmpl.Execute(w, nil)
+	// Explicitly call the specific template target name
+	if err := h.adminTmpl.ExecuteTemplate(w, "admin.html", nil); err != nil {
+		http.Error(w, "Admin template execution error: "+err.Error(), 500)
+	}
 }
 
 func (h *handler) reload(w http.ResponseWriter, r *http.Request) {
