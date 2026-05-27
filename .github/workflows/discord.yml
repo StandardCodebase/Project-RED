@@ -131,8 +131,7 @@ jobs:
                 color:       $color,
                 fields:      $fields,
                 footer: {
-                  text:     $repo,
-                  icon_url: "https://github.com/favicon.ico"
+                  text: $repo
                 },
                 timestamp: $timestamp
               }]
