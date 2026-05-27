@@ -4,7 +4,6 @@ networks:
 
 services:
   red_engine:
-    # CHANGE THIS: Use the local image we just compiled natively
     image: red-engine-image
     container_name: red_engine_node
     restart: unless-stopped

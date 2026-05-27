@@ -103,17 +103,48 @@ func (s *Store) Reload() error {
 	// Map by filepath for easier lookup
 	allSignatures := make(map[string]ManifestEntry)
 	filepath.WalkDir(s.dataDir, func(path string, d fs.DirEntry, err error) error {
-		if err == nil && !d.IsDir() && filepath.Base(path) == "manifest.json" {
-			if manifestData, err := os.ReadFile(path); err == nil {
-				manifest := parseManifestJSON(manifestData)
-				// Map entries by filepath
-				for filepath, entry := range manifest {
-					allSignatures[filepath] = entry
-				}
+		if err != nil || d.IsDir() || filepath.Base(path) != "manifest.json" {
+			return nil
+		}
+
+		manifestData, err := os.ReadFile(path)
+		if err != nil {
+			log.Printf("Warning: cannot read manifest %s: %v", path, err)
+			return nil
+		}
+
+		manifest := parseManifestJSON(manifestData)
+		if len(manifest) == 0 {
+			return nil
+		}
+
+		// Get manifest directory relative to dataDir
+		manifestDir := filepath.Dir(path)
+		relManifestDir, err := filepath.Rel(s.dataDir, manifestDir)
+		if err != nil {
+			relManifestDir = "."
+		}
+		relManifestDir = filepath.ToSlash(relManifestDir)
+
+		for key, entry := range manifest {
+			key = filepath.ToSlash(key)
+			var fullKey string
+			if relManifestDir == "." {
+				fullKey = key
+			} else if strings.HasPrefix(key, relManifestDir+"/") || key == relManifestDir {
+				fullKey = key
+			} else {
+				fullKey = filepath.ToSlash(filepath.Join(relManifestDir, key))
 			}
+			allSignatures[fullKey] = entry
 		}
 		return nil
 	})
+
+	log.Printf("[DEBUG] Loaded %d signature entries", len(allSignatures))
+	for k := range allSignatures {
+		log.Printf("[DEBUG]   %s", k)
+	}
 
 	newNav := make(map[string]*Section)
 
@@ -143,6 +174,7 @@ func (s *Store) Reload() error {
 		// Get relative path in the format used in manifest
 		rel, _ := filepath.Rel(s.dataDir, path)
 		relativePath := strings.TrimPrefix(filepath.ToSlash(rel), "/")
+		log.Printf("[DEBUG] Checking file: %s -> relativePath=%s", path, relativePath)
 
 		// Try to find manifest entry by filepath
 		if entry, exists := allSignatures[relativePath]; exists {
@@ -160,12 +192,27 @@ func (s *Store) Reload() error {
 					sigBytes, err2 := hex.DecodeString(entry.Signature)
 
 					if err1 == nil && err2 == nil && len(pubBytes) == ed25519.PublicKeySize {
+						// Check 1: Did the plugin sign the raw Markdown content?
 						if ed25519.Verify(pubBytes, content, sigBytes) {
 							isVerified = true
 							authorName = trustedAuthor
+							// Check 2: Did the plugin sign the Hex string of the SHA256 hash? (Very common)
+						} else if ed25519.Verify(pubBytes, []byte(fileHash), sigBytes) {
+							isVerified = true
+							authorName = trustedAuthor
+							// Check 3: Did the plugin sign the raw SHA256 bytes?
+						} else if ed25519.Verify(pubBytes, hashBytes[:], sigBytes) {
+							isVerified = true
+							authorName = trustedAuthor
+						} else {
+							log.Printf("[DEBUG] Signature verification failed for %s (Tried Content, Hex Hash, and Byte Hash)", relativePath)
 						}
 					}
+				} else {
+					log.Printf("[DEBUG] Public key not trusted for %s: %s", relativePath, entry.PublicKey)
 				}
+			} else {
+				log.Printf("[DEBUG] Hash mismatch for %s: stored=%s, actual=%s", relativePath, entryHash, fileHash)
 			}
 		}
 
@@ -265,8 +312,6 @@ func (s *Store) Root() map[string]*Section {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Return a shallow copy so that the caller doesn't hold a reference
-	// to the live map that might be replaced by Reload().
 	copy := make(map[string]*Section, len(s.nav))
 	for k, v := range s.nav {
 		copy[k] = v
