@@ -7,7 +7,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/RED-Collective/red-engine/internal/render"
 	"github.com/RED-Collective/red-engine/internal/store"
 )
 
@@ -43,7 +42,6 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case path == "/":
-
 		d.Body = template.HTML(`<div class="article"><h1>` + h.cfg.SiteName + `</h1><p>The free practical knowledge base. Choose a topic from the sidebar.</p></div>`)
 
 	case len(parts) == 1 && topCat != "":
@@ -52,31 +50,21 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
-		d.Title = cap(topCat)
-		d.Crumb = []crumb{{Label: cap(topCat), Path: "/" + topCat}}
+		d.Title = capitalize(topCat)
+		d.Crumb = []crumb{{Label: capitalize(topCat), Path: "/" + topCat}}
 		d.Body = template.HTML(sectionHTML(sec))
 
 	default:
-		raw, ok := h.store.Resolve(path)
-		if !ok {
+		art := h.store.Get(path)
+		if art == nil {
 			http.NotFound(w, r)
 			return
 		}
-
-		result, err := render.Markdown(raw)
-		if err != nil {
-			http.Error(w, "render error", 500)
-			return
-		}
-
-		w.Header().Set("X-RED-Content-Hash", result.Hash)
-
-		d.Title = cap(parts[len(parts)-1])
+		d.Title = capitalize(parts[len(parts)-1])
 		d.Crumb = buildCrumbs(parts)
-		d.Body = template.HTML(`<div class="article">` + result.HTMLContent + `</div>`)
+		d.Body = art.Body
 	}
 
-	// Change the template execute call at the very bottom of serve.go
 	if err := h.tmpl.ExecuteTemplate(w, "base.html", d); err != nil {
 		http.Error(w, "template error: "+err.Error(), 500)
 		return
@@ -85,12 +73,10 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 
 func sectionHTML(sec *store.Section) string {
 	var b strings.Builder
-
-	// Pre-grow the builder's internal buffer to prevent runtime re-allocations
 	b.Grow(1024)
 
 	b.WriteString(`<div class="section-index"><h1>`)
-	b.WriteString(cap(sec.Name))
+	b.WriteString(capitalize(sec.Name))
 	b.WriteString(`</h1><ul>`)
 
 	for _, a := range sec.Articles {
@@ -104,7 +90,7 @@ func sectionHTML(sec *store.Section) string {
 
 	for _, sub := range sec.Sub {
 		b.WriteString(`<h2>`)
-		b.WriteString(cap(sub.Name))
+		b.WriteString(capitalize(sub.Name))
 		b.WriteString(`</h2><ul>`)
 		for _, a := range sub.Articles {
 			b.WriteString(`<li><a href="`)
@@ -125,12 +111,12 @@ func buildCrumbs(parts []string) []crumb {
 	path := ""
 	for _, p := range parts {
 		path += "/" + p
-		crumbs = append(crumbs, crumb{Label: cap(p), Path: path})
+		crumbs = append(crumbs, crumb{Label: capitalize(p), Path: path})
 	}
 	return crumbs
 }
 
-func cap(s string) string {
+func capitalize(s string) string {
 	s = strings.ReplaceAll(s, "-", " ")
 	s = strings.ReplaceAll(s, "_", " ")
 	if s == "" {

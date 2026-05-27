@@ -37,6 +37,7 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 1. SSRF Protection
+	// 1. SSRF Protection & URL Parsing
 	parsedURL, err := url.Parse(req.URL)
 	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
 		http.Error(w, "Invalid URL scheme", http.StatusBadRequest)
@@ -48,8 +49,43 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Directory & Path Sanitization
+	// --- NEW: SMART GITHUB URL REWRITER ---
+	if host == "github.com" {
+		pathParts := strings.Split(strings.Trim(parsedURL.Path, "/"), "/")
+		if len(pathParts) == 2 {
+			// If someone pasted a Repo home page. Auto-convert to a ZIP archive of the default branch.
+			req.URL = "https://github.com/" + pathParts[0] + "/" + pathParts[1] + "/archive/HEAD.zip"
+			parsedURL, _ = url.Parse(req.URL) // Re-parse for downstream logic
+		} else if len(pathParts) > 2 && pathParts[2] == "blob" {
+			// If someone pasted a Web UI link to a specific file. Auto-convert to raw text.
+			req.URL = "https://raw.githubusercontent.com/" + pathParts[0] + "/" + pathParts[1] + "/" + strings.Join(pathParts[3:], "/")
+			parsedURL, _ = url.Parse(req.URL)
+		}
+	}
+	// --------------------------------------
+
+	// 2. Directory & Path Sanitization & Auto-Naming
 	targetSubPath := filepath.Clean(req.Filename)
+
+	if targetSubPath == "." || targetSubPath == "" {
+		pathParts := strings.Split(strings.TrimRight(parsedURL.Path, "/"), "/")
+		if len(pathParts) > 0 {
+			if parsedURL.Host == "github.com" && len(pathParts) >= 3 && pathParts[3] == "archive" {
+				targetSubPath = pathParts[2] // Automatically grabs the "repo" name!
+			} else {
+				lastPart := pathParts[len(pathParts)-1]
+				lastPart = strings.TrimSuffix(lastPart, ".zip")
+				lastPart = strings.TrimSuffix(lastPart, ".tar.gz")
+				lastPart = strings.TrimSuffix(lastPart, ".tgz")
+				lastPart = strings.TrimSuffix(lastPart, ".md")
+				if lastPart != "" {
+					targetSubPath = lastPart
+				}
+			}
+		}
+	}
+
+	// Final Fallback
 	if targetSubPath == "." || targetSubPath == "" || strings.HasPrefix(targetSubPath, "..") || filepath.IsAbs(targetSubPath) {
 		targetSubPath = filepath.Join("remote", "sync-"+time.Now().Format("20060102150405"))
 	}
@@ -59,6 +95,7 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 
 	// 3. Determine if it is a single file or a compressed multi-file bundle
 	lowerURL := strings.ToLower(req.URL)
+
 	if strings.HasSuffix(lowerURL, ".tar.gz") || strings.HasSuffix(lowerURL, ".zip") {
 		srcType := "tar.gz"
 		if strings.HasSuffix(lowerURL, ".zip") {

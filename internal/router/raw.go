@@ -8,22 +8,25 @@ import (
 func (h *handler) source(w http.ResponseWriter, r *http.Request) {
 	targetPath := strings.TrimPrefix(r.URL.Path, "/-/source")
 
-	raw, ok := h.store.Resolve(targetPath)
-	if !ok {
+	// CHANGE: h.store.Resolve -> h.store.Get
+	art := h.store.Get(targetPath)
+	if art == nil {
 		http.NotFound(w, r)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Write([]byte(raw))
+	// Use the stored Body from the Article struct
+	w.Write([]byte(art.Body))
 }
 
 func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 	targetPath := strings.TrimPrefix(r.URL.Path, "/-/download")
 
-	raw, ok := h.store.Resolve(targetPath)
-	if !ok {
+	// CHANGE: h.store.Resolve -> h.store.Get
+	art := h.store.Get(targetPath)
+	if art == nil {
 		http.NotFound(w, r)
 		return
 	}
@@ -34,5 +37,6 @@ func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Write([]byte(raw))
+	w.Write([]byte(art.Body))
+
 }

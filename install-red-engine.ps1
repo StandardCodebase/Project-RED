@@ -2,7 +2,34 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "🚀 Installing RED Engine..." -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# 1. Create data directory safely as the standard user
+# 1. Check if we are inside the repository; if not, clone it.
+if (-Not (Test-Path "docker-compose.yml"))
+{
+    Write-Host "[*] Repository not detected in current directory."
+
+    if (-Not (Get-Command "git" -ErrorAction SilentlyContinue))
+    {
+        Write-Host "❌ Error: 'git' is not installed. Please install Git for Windows to continue." -ForegroundColor Red
+        Exit
+    }
+
+    Write-Host "[*] Cloning RED Engine repository..."
+    git clone https://github.com/RED-Collective/red-engine.git
+
+    if ($LASTEXITCODE -ne 0)
+    {
+        Write-Host "❌ Error: Failed to clone repository." -ForegroundColor Red
+        Exit
+    }
+
+    Write-Host "[*] Navigating into red-engine directory..."
+    Set-Location "red-engine"
+} else
+{
+    Write-Host "[*] Running from inside existing repository."
+}
+
+# 2. Create data directory safely as the standard user
 if (-Not (Test-Path ".\data"))
 {
     Write-Host "[*] Creating .\data directory..."
@@ -12,7 +39,7 @@ if (-Not (Test-Path ".\data"))
     Write-Host "[*] .\data directory already exists."
 }
 
-# 2. Check for or create config.json with a secure token
+# 3. Check for or create config.json with a secure token
 if (-Not (Test-Path "config.json"))
 {
     Write-Host "[*] Generating default config.json..."
@@ -38,29 +65,41 @@ if (-Not (Test-Path "config.json"))
     Write-Host "[*] config.json already exists. Skipping default generation."
 }
 
-# 3. Detect the container engine
+# 4. Detect the container engine
 $ComposeCmd = ""
+$ComposeArgs = @("up", "--build", "-d")
+
 if (Get-Command "podman-compose" -ErrorAction SilentlyContinue)
 {
     $ComposeCmd = "podman-compose"
 } elseif (Get-Command "docker-compose" -ErrorAction SilentlyContinue)
 {
     $ComposeCmd = "docker-compose"
-} else
+} elseif (Get-Command "docker" -ErrorAction SilentlyContinue)
 {
-    Write-Host "❌ Error: Neither podman-compose nor docker-compose found on this system." -ForegroundColor Red
+    # Check if modern 'docker compose' (V2) is available
+    try
+    {
+        $null = Invoke-Expression "docker compose version 2>&1"
+        if ($LASTEXITCODE -eq 0)
+        {
+            $ComposeCmd = "docker"
+            $ComposeArgs = @("compose", "up", "--build", "-d")
+        }
+    } catch
+    {
+    }
+}
+
+if ($ComposeCmd -eq "")
+{
+    Write-Host "❌ Error: Neither podman-compose nor docker compose found on this system." -ForegroundColor Red
     Write-Host "Please install Podman or Docker Desktop to continue." -ForegroundColor Red
     Exit
 }
 
-Write-Host "[*] Starting RED Engine using $ComposeCmd..."
-if ($ComposeCmd -eq "podman-compose")
-{
-    podman-compose up --build -d
-} else
-{
-    docker-compose up --build -d
-}
+Write-Host "[*] Starting RED Engine..."
+& $ComposeCmd $ComposeArgs
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "✅ Installation Complete!" -ForegroundColor Green
