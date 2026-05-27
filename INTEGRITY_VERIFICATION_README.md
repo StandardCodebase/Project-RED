@@ -6,7 +6,7 @@ This document outlines the integrity verification system integrated into RED Eng
 ## How It Works
 
 ### 1. **Manifest System**
-- External tools (like the Obsidian RED Signer plugin) create `manifest.json` in vault directories
+- the Obsidian RED Signer plugin create `manifest.json` in vault directories
 - Format: `{ "filepath": { "file_hash": "hex", "public_key": "hex", "signature": "hex" } }`
 - Each entry signs the file's SHA-256 hash using Ed25519 cryptography
 

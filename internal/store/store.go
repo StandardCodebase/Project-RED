@@ -61,7 +61,6 @@ type ManifestEntry struct {
 	Signature string `json:"signature"`
 }
 
-// Manifest can be either wrapped {"files": {...}} or flat {filepath: {...}}
 type Manifest struct {
 	Files map[string]ManifestEntry `json:"files"`
 }
@@ -69,18 +68,18 @@ type Manifest struct {
 // Helper to unmarshal flexible manifest format
 func parseManifestJSON(data []byte) map[string]ManifestEntry {
 	result := make(map[string]ManifestEntry)
-	
+
 	// Try wrapped format first
 	var wrapped Manifest
 	if err := json.Unmarshal(data, &wrapped); err == nil && len(wrapped.Files) > 0 {
 		return wrapped.Files
 	}
-	
+
 	// Try flat format: {filepath: entry, ...}
 	if err := json.Unmarshal(data, &result); err == nil {
 		return result
 	}
-	
+
 	return result
 }
 

@@ -61,6 +61,7 @@ func New(s *store.Store, cfg *config.Config, cfgPath string) http.Handler {
 
 func (h *handler) adminUI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// Explicitly call the specific template target name
 	if err := h.adminTmpl.ExecuteTemplate(w, "admin.html", nil); err != nil {
 		http.Error(w, "Admin template execution error: "+err.Error(), 500)
 	}
