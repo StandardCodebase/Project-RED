@@ -54,7 +54,15 @@ else
     echo "[*] config.json already exists. Skipping default generation."
 fi
 
-# 4. Detect the container engine
+# 4. Check for or create contributors.json
+if [ ! -f "contributors.json" ]; then
+    echo "[*] Generating default contributors.json..."
+    echo "[]" > contributors.json
+else
+    echo "[*] contributors.json already exists."
+fi
+
+# 5. Detect the container engine
 if command -v podman-compose &> /dev/null; then
     COMPOSE_CMD="podman-compose up --build -d"
 elif command -v docker-compose &> /dev/null; then

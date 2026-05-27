@@ -65,7 +65,17 @@ if (-Not (Test-Path "config.json"))
     Write-Host "[*] config.json already exists. Skipping default generation."
 }
 
-# 4. Detect the container engine
+# 4. Check for or create contributors.json
+if (-Not (Test-Path "contributors.json"))
+{
+    Write-Host "[*] Generating default contributors.json..."
+    "[]" | Set-Content "contributors.json"
+} else
+{
+    Write-Host "[*] contributors.json already exists."
+}
+
+# 5. Detect the container engine
 $ComposeCmd = ""
 $ComposeArgs = @("up", "--build", "-d")
 
