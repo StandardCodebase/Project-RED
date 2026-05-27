@@ -289,17 +289,21 @@
 
                 syncArray.forEach((item) => {
                     const li = document.createElement("li");
+                    // We escape the filename to handle nested directory slashes safely in JS arguments
+                    const escapedFilename = btoa(item.filename);
                     li.innerHTML = `
                         <div class="sync-info">
                             <strong>${item.filename}</strong>
                             <span>${item.url}</span>
+                            <label style="margin-top:0.5rem; display:flex; align-items:center; gap:0.25rem; font-size:0.75rem; color:#aaa;">
+                                <input type="checkbox" id="delete-files-${escapedFilename}" checked> Delete local files on remove
+                            </label>
                         </div>
-                        <button class="btn-delete" onclick="removeGuide('${item.filename}')">Remove</button>
+                        <button class="btn-delete" onclick="removeGuide('${item.filename}', '${escapedFilename}')">Remove</button>
                     `;
                     list.appendChild(li);
                 });
             }
-
             // Fire archive imports
             async function syncGuide() {
                 const status = document.getElementById("status");
@@ -340,13 +344,21 @@
             }
 
             // Drop remote data scopes dynamically
-            async function removeGuide(filename) {
-                if (
-                    !confirm(
-                        `Are you sure you want to remove target tracking for "${filename}"? This will prune assets from system storage.`,
-                    )
-                )
-                    return;
+            async function removeGuide(filename, escapedFilename) {
+                const deleteCheckbox = document.getElementById(
+                    `delete-files-${escapedFilename}`,
+                );
+                const deleteLocal = deleteCheckbox
+                    ? deleteCheckbox.checked
+                    : false;
+
+                let msg = `Are you sure you want to stop tracking "${filename}"?`;
+                if (deleteLocal) {
+                    msg +=
+                        " This will permanently delete its files from system storage!";
+                }
+
+                if (!confirm(msg)) return;
 
                 try {
                     const response = await fetch("/-/admin/remove", {
@@ -355,7 +367,10 @@
                             "Content-Type": "application/json",
                             "X-Admin-Token": sessionToken,
                         },
-                        body: JSON.stringify({ filename: filename }),
+                        body: JSON.stringify({
+                            filename: filename,
+                            deleteLocalFiles: deleteLocal, // <-- PASSES STATE TO BACKEND
+                        }),
                     });
 
                     if (response.ok) {

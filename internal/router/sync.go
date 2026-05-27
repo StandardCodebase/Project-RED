@@ -163,7 +163,8 @@ func (h *handler) adminRemove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Filename string `json:"filename"` // <-- FIXED: Lowercase 'n' to match javascript
+		Filename         string `json:"filename"`
+		DeleteLocalFiles bool   `json:"deleteLocalFiles"` // <-- NEW FLAG
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
@@ -185,16 +186,18 @@ func (h *handler) adminRemove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Delete the physical target directory or file safely
-	safeName := filepath.Clean(req.Filename)
-	if safeName != "." && safeName != "" && !strings.HasPrefix(safeName, "..") && !filepath.IsAbs(safeName) {
-		fullRemovalPath := filepath.Join(h.store.DataDir(), safeName)
-		os.RemoveAll(fullRemovalPath)
+	// 3. CONDITIONALLY Delete the physical target directory or file safely
+	if req.DeleteLocalFiles {
+		safeName := filepath.Clean(req.Filename)
+		if safeName != "." && safeName != "" && !strings.HasPrefix(safeName, "..") && !filepath.IsAbs(safeName) {
+			fullRemovalPath := filepath.Join(h.store.DataDir(), safeName)
+			os.RemoveAll(fullRemovalPath) // Cleans folders and files instantly
+		}
 	}
 
-	// 4. Hot-reload the engine so it vanishes from the UI mapping
+	// 4. Hot-reload the engine so it updates the UI mapping
 	h.store.Reload()
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Successfully removed " + safeName))
+	w.Write([]byte("Successfully untracked " + req.Filename))
 }

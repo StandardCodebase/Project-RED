@@ -4,11 +4,11 @@
   "dataDir": "/app/data",
   "sourceURL": "",
   "sourceType": "",
-  "adminToken": "jvYv9tJbzrwgCZq3yyNgavqZ",
+  "adminToken": "MFqnqC41NfrOlpghKfI8jnVl",
   "startupSync": [
     {
-      "url": "https://raw.githubusercontent.com/yuin/goldmark/master/README.md",
-      "filename": "remote/sync-20260527174827.md"
+      "url": "https://github.com/dvorka/awesome-markdown-repositories",
+      "filename": "test directory.md"
     }
   ]
 }
