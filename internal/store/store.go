@@ -14,15 +14,16 @@ import (
 	"sync"
 
 	"github.com/RED-Collective/red-engine/internal/render"
+	"github.com/fsnotify/fsnotify"
 )
 
 type Article struct {
 	Path     string
 	Title    string
 	Body     template.HTML
-	Hash     string // SHA-256 Hash for UI Display
-	Verified bool   // Ed25519 Verification Status
-	Author   string // Name of the verified signer
+	Hash     string
+	Verified bool
+	Author   string
 }
 
 type Section struct {
@@ -48,7 +49,6 @@ func (s *Store) DataDir() string {
 	return s.dataDir
 }
 
-// --- Cryptographic Structs matching the Obsidian Plugin ---
 type Contributor struct {
 	Name      string `json:"name"`
 	PublicKey string `json:"public_key"`
@@ -56,7 +56,7 @@ type Contributor struct {
 
 type ManifestEntry struct {
 	FileHash  string `json:"file_hash"`
-	Hash      string `json:"hash"` // Fallback support
+	Hash      string `json:"hash"`
 	PublicKey string `json:"public_key"`
 	Signature string `json:"signature"`
 }
@@ -65,28 +65,62 @@ type Manifest struct {
 	Files map[string]ManifestEntry `json:"files"`
 }
 
-// Helper to unmarshal flexible manifest format
 func parseManifestJSON(data []byte) map[string]ManifestEntry {
 	result := make(map[string]ManifestEntry)
-
-	// Try wrapped format first
 	var wrapped Manifest
 	if err := json.Unmarshal(data, &wrapped); err == nil && len(wrapped.Files) > 0 {
 		return wrapped.Files
 	}
-
-	// Try flat format: {filepath: entry, ...}
 	if err := json.Unmarshal(data, &result); err == nil {
 		return result
 	}
-
 	return result
+}
+
+func (s *Store) Watch() error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+
+	absDataDir, _ := filepath.Abs(s.dataDir)
+
+	filepath.WalkDir(absDataDir, func(path string, d fs.DirEntry, err error) error {
+		if err == nil && d.IsDir() {
+			watcher.Add(path)
+		}
+		return nil
+	})
+
+	go func() {
+		defer watcher.Close()
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove|fsnotify.Rename) != 0 {
+					log.Printf("🔄 File change detected: %s. Reloading store...", event.Name)
+					s.Reload()
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Println("⚠️ Watcher error:", err)
+			}
+		}
+	}()
+
+	log.Printf("[DEBUG] File watcher started on %s", absDataDir)
+	return nil
 }
 
 func (s *Store) Reload() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// 1. Load the Trusted Public Keys from contributors.json
+
 	trustedKeys := make(map[string]string)
 	if trustData, err := os.ReadFile("contributors.json"); err == nil {
 		var contributors []Contributor
@@ -99,26 +133,19 @@ func (s *Store) Reload() error {
 		log.Println("⚠️  Warning: contributors.json not found. Verification checks disabled.")
 	}
 
-	// 2. Pre-load all signatures from any manifest.json in the data directory
-	// Map by filepath for easier lookup
 	allSignatures := make(map[string]ManifestEntry)
 	filepath.WalkDir(s.dataDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || filepath.Base(path) != "manifest.json" {
 			return nil
 		}
-
 		manifestData, err := os.ReadFile(path)
 		if err != nil {
-			log.Printf("Warning: cannot read manifest %s: %v", path, err)
 			return nil
 		}
-
 		manifest := parseManifestJSON(manifestData)
 		if len(manifest) == 0 {
 			return nil
 		}
-
-		// Get manifest directory relative to dataDir
 		manifestDir := filepath.Dir(path)
 		relManifestDir, err := filepath.Rel(s.dataDir, manifestDir)
 		if err != nil {
@@ -141,11 +168,6 @@ func (s *Store) Reload() error {
 		return nil
 	})
 
-	log.Printf("[DEBUG] Loaded %d signature entries", len(allSignatures))
-	for k := range allSignatures {
-		log.Printf("[DEBUG]   %s", k)
-	}
-
 	newNav := make(map[string]*Section)
 
 	err := filepath.WalkDir(s.dataDir, func(path string, d fs.DirEntry, err error) error {
@@ -158,7 +180,6 @@ func (s *Store) Reload() error {
 			return nil
 		}
 
-		// 3. Calculate SHA-256
 		hashBytes := sha256.Sum256(content)
 		fileHash := hex.EncodeToString(hashBytes[:])
 
@@ -167,64 +188,51 @@ func (s *Store) Reload() error {
 			return nil
 		}
 
-		// 4. Ed25519 Cryptographic Verification
+		rel, _ := filepath.Rel(s.dataDir, path)
+		relativePath := strings.TrimPrefix(filepath.ToSlash(rel), "/")
+
+		// Clean the path for web URL building
+		cleanPath := strings.TrimSuffix(relativePath, ".md")
+
 		isVerified := false
 		authorName := "Unverified / Unknown Origin"
 
-		// Get relative path in the format used in manifest
-		rel, _ := filepath.Rel(s.dataDir, path)
-		relativePath := strings.TrimPrefix(filepath.ToSlash(rel), "/")
-		log.Printf("[DEBUG] Checking file: %s -> relativePath=%s", path, relativePath)
-
-		// Try to find manifest entry by filepath
 		if entry, exists := allSignatures[relativePath]; exists {
-			// Use file_hash if available, otherwise hash
 			entryHash := entry.FileHash
 			if entryHash == "" {
 				entryHash = entry.Hash
 			}
 
-			// Does the hash match?
 			if entryHash == fileHash {
-				// Does the signature belong to a trusted public key?
 				if trustedAuthor, isTrusted := trustedKeys[strings.ToLower(entry.PublicKey)]; isTrusted {
 					pubBytes, err1 := hex.DecodeString(entry.PublicKey)
 					sigBytes, err2 := hex.DecodeString(entry.Signature)
 
 					if err1 == nil && err2 == nil && len(pubBytes) == ed25519.PublicKeySize {
-						// Check 1: Did the plugin sign the raw Markdown content?
 						if ed25519.Verify(pubBytes, content, sigBytes) {
 							isVerified = true
 							authorName = trustedAuthor
-							// Check 2: Did the plugin sign the Hex string of the SHA256 hash? (Very common)
 						} else if ed25519.Verify(pubBytes, []byte(fileHash), sigBytes) {
 							isVerified = true
 							authorName = trustedAuthor
-							// Check 3: Did the plugin sign the raw SHA256 bytes?
 						} else if ed25519.Verify(pubBytes, hashBytes[:], sigBytes) {
 							isVerified = true
 							authorName = trustedAuthor
-						} else {
-							log.Printf("[DEBUG] Signature verification failed for %s (Tried Content, Hex Hash, and Byte Hash)", relativePath)
 						}
 					}
-				} else {
-					log.Printf("[DEBUG] Public key not trusted for %s: %s", relativePath, entry.PublicKey)
 				}
-			} else {
-				log.Printf("[DEBUG] Hash mismatch for %s: stored=%s, actual=%s", relativePath, entryHash, fileHash)
 			}
 		}
 
-		// 5. Build Article Structure
-		parts := strings.Split(filepath.ToSlash(rel), "/")
+		// Use cleanPath (no .md) to build the tree and URLs
+		parts := strings.Split(filepath.ToSlash(cleanPath), "/")
 
-		title := strings.TrimSuffix(parts[len(parts)-1], ".md")
+		title := parts[len(parts)-1]
 		title = strings.ReplaceAll(title, "-", " ")
 		title = strings.Title(title)
 
 		art := &Article{
-			Path:     "/" + filepath.ToSlash(rel),
+			Path:     "/" + filepath.ToSlash(cleanPath),
 			Title:    title,
 			Body:     template.HTML(res.HTMLContent),
 			Hash:     fileHash,
@@ -232,7 +240,6 @@ func (s *Store) Reload() error {
 			Author:   authorName,
 		}
 
-		// Tree Building
 		if len(parts) == 1 {
 			if newNav["root"] == nil {
 				newNav["root"] = &Section{Name: "root"}

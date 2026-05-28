@@ -1,44 +1,29 @@
 #!/bin/bash
 echo "========================================"
-echo "🚀 Installing RED Engine..."
+echo "🚀 Installing RED Engine (Production Mode)..."
 echo "========================================"
 
-# 1. Check if we are inside the repository; if not, clone it.
+# Check for root/sudo privileges to bind ports 80/443
+if [[ $EUID -ne 0 ]]; then
+   echo "⚠️  Sudo privileges are required to bind ports 80 and 443."
+   echo "Please enter your password when prompted."
+   sudo "$0" "$@"
+   exit $?
+fi
+
+# 1. Repository Check
 if [ ! -f "docker-compose.yml" ]; then
-    echo "[*] Repository not detected in current directory."
-
-    if ! command -v git &> /dev/null; then
-        echo "❌ Error: 'git' is not installed. Please install git to continue."
-        exit 1
-    fi
-
     echo "[*] Cloning RED Engine repository..."
     git clone https://github.com/RED-Collective/red-engine.git
-    if [ $? -ne 0 ]; then
-        echo "❌ Error: Failed to clone repository."
-        exit 1
-    fi
-
-    echo "[*] Navigating into red-engine directory..."
     cd red-engine || exit 1
-else
-    echo "[*] Running from inside existing repository."
 fi
 
-# 2. Create data directory safely as the standard user (NO SUDO)
-if [ ! -d "./data" ]; then
-    echo "[*] Creating ./data directory..."
-    mkdir -p ./data
-else
-    echo "[*] ./data directory already exists."
-fi
+# 2. Setup Directories
+mkdir -p ./data
 
-# 3. Check for or create config.json with a secure token
+# 3. Handle config.json
 if [ ! -f "config.json" ]; then
-    echo "[*] Generating default config.json..."
-    # Generate a secure 24-character token
     NEW_TOKEN=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 24 | head -n 1)
-
     cat <<EOF > config.json
 {
   "addr": ":8080",
@@ -48,38 +33,27 @@ if [ ! -f "config.json" ]; then
   "startupSync": []
 }
 EOF
-    echo "[*] Generated secure Admin Token: $NEW_TOKEN"
-    echo "⚠️  PLEASE SAVE THIS TOKEN! You will need it to log in to the admin panel."
-else
-    echo "[*] config.json already exists. Skipping default generation."
+    echo "[*] Generated Admin Token: $NEW_TOKEN"
 fi
 
-# 4. Check for or create contributors.json
+# 4. Handle contributors.json
 if [ ! -f "contributors.json" ]; then
-    echo "[*] Generating default contributors.json..."
     echo "[]" > contributors.json
-else
-    echo "[*] contributors.json already exists."
 fi
 
-# 5. Detect the container engine
-if command -v podman-compose &> /dev/null; then
-    COMPOSE_CMD="podman-compose up --build -d"
-elif command -v docker-compose &> /dev/null; then
-    COMPOSE_CMD="docker-compose up --build -d"
-elif command -v docker &> /dev/null && docker compose version &> /dev/null; then
-    COMPOSE_CMD="docker compose up --build -d"
-else
-    echo "❌ Error: Neither podman-compose nor docker compose found on this system."
-    echo "Please install Podman or Docker to continue."
-    exit 1
-fi
+# 5. Build and Deploy
+echo "[*] Building local image..."
+podman build --network=host -t red-engine-image .
 
-echo "[*] Starting RED Engine using container engine..."
-$COMPOSE_CMD
+echo "[*] Starting services..."
+podman-compose up -d
 
+# 6. Final Status
+TOKEN=$(grep -oP '"adminToken": "\K[^"]+' config.json)
 echo "========================================"
 echo "✅ Installation Complete!"
-echo "🌐 Your node is running at: http://localhost"
+echo "🌐 Node running at: http://localhost"
 echo "⚙️  Admin Panel: http://localhost/-/admin"
+echo "🔑 YOUR ADMIN TOKEN: $TOKEN"
+echo "⚠️  PLEASE SAVE THIS TOKEN!"
 echo "========================================"
