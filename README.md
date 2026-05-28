@@ -86,11 +86,12 @@ A sovereign network is only as strong as its ability to replicate data rapidly.
 
 Earlier versions experimented with dual‑tier (Clearnet + Tor) isolation, but this proved operationally insecure and unnecessarily complex. The current reference deployment uses a **single container** behind a Caddy reverse proxy.
 
+
 ```mermaid
 graph TD
     Inet((Global Internet))
     Inet --> Caddy[Caddy Proxy<br/>Port 80/443]
-    Caddy --> RED[RED Engine Container<br/>(Go + Goldmark)]
+    Caddy --> RED[RED Engine Container<br/>Go + Goldmark]
     RED --> Volume[(Host Volume /data)]
     Volume --> Markdown[Markdown Files<br/>+ manifest.json<br/>+ contributors.json]
 ```
