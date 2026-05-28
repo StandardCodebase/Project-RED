@@ -9,6 +9,10 @@
     {
       "url": "https://github.com/mundimark/awesome-markdown/archive/HEAD.zip",
       "filename": "Awesome Markdown"
+    },
+    {
+      "url": "https://github.com/StandardCodebase/test-auth/archive/HEAD.zip",
+      "filename": "test-auth"
     }
   ]
 }
