@@ -8,7 +8,6 @@
         <link rel="stylesheet" href="/static/layout.css" />
         <link rel="stylesheet" href="/static/nav.css" />
         <link rel="stylesheet" href="/static/article.css" />
-        <!-- Optional: add a favicon or additional meta tags -->
     </head>
     <body>
         <div id="wrap">
@@ -17,21 +16,20 @@
                 <div class="nav-heading">{{ $section.Name }}</div>
                 <div class="nav-group">
                     {{ range $art := $section.Articles }}
-                    <a href="{{ $art.Path }}" class="nav-item"
-                        >{{ $art.Title }}</a
-                    >
-                    {{ end }} {{ range $subName, $subSection := $section.Sub }}
+                    <a href="{{ $art.Path }}" class="nav-item">{{ $art.Title }}</a>
+                    {{ end }} 
+                    
+                    {{ range $subName, $subSection := $section.Sub }}
                     <div class="nav-sub-heading">{{ $subSection.Name }}</div>
                     {{ range $art := $subSection.Articles }}
-                    <a href="{{ $art.Path }}" class="nav-item sub-item"
-                        >{{ $art.Title }}</a
-                    >
-                    {{ end }} {{ end }}
+                    <a href="{{ $art.Path }}" class="nav-item sub-item">{{ $art.Title }}</a>
+                    {{ end }} 
+                    {{ end }}
                 </div>
                 {{ end }}
             </nav>
 
-<main id="main">
+            <main id="main">
                 {{ if .Crumb }}
                 <div class="breadcrumb">
                     <a href="/">Home</a>
@@ -52,31 +50,46 @@
                     {{ end }}
                 </div>
                 {{ end }}
+                
 
-                {{ if .Hash }}
-                <div class="security-header">
-                    {{ if .Verified }}
-                        <div class="badge verified" title="Cryptographically Verified">
-                            ✅ Verified Contributor: {{ .Author }}
-                        </div>
-                    {{ else }}
-                        <div class="badge unverified" title="{{ if .VerificationError }}{{ .VerificationError }}{{ else }}File signature not found or invalid{{ end }}" style="cursor: help;">
-                            ⚠️ Unverified (Hover for reason)
-                        </div>
-                    {{ end }}
-                </div>
-                {{ end }}
+<div class="security-header" style="margin-bottom: 1.5rem;">
+    {{ if .Verified }}
+        <div class="badge verified" style="background: #2ed573; color: white; padding: 0.5rem 0.75rem; border-radius: 4px; display: inline-block; font-weight: bold;">
+            ✅ Verified Contributor: {{ .Author }}
+        </div>
+    {{ else }}
+        <div class="verification-failure-container hover-container" style="display: flex; flex-direction: column; gap: 0.5rem; background: #e7e3e3; border-left: 4px solid #ff4757; padding: 0.75rem 1rem; border-radius: 0 4px 4px 0; cursor: help; transition: all 0.2s ease;">
+            
+            <div class="badge unverified" style="color: #ff4757; font-weight: bold; font-size: 0.95rem;">
+                ⚠️ Unverified / Unknown Origin
+            </div>
+            
+            {{ if .VerificationError }}
+                <div class="reason-text" style="color: black; font-size: 0.85rem; font-family: monospace; background: #c4c0c0; padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid #444; max-height: 0; opacity: 0; overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.2s ease;">
+                    {{ .VerificationError }}
+               </div>
+            {{ end }}
+        </div>
+
+        <style>
+            .hover-container:hover {
+                background: #dbd7d7 !important; /* Slightly darkens background on hover */
+            }
+            .hover-container:hover .reason-text {
+                max-height: 100px !important; /* Expands open dynamically */
+                opacity: 1 !important;        /* Fades in content text */
+                margin-top: 0.25rem;          /* Adds breathing room spacing */
+            }
+        </style>
+    {{ end }}
+</div>
 
                 <div class="article-content">{{ .Body }}</div>
 
-                {{ if .Hash }}
                 <div class="hash-footer">
                     <span class="hash-label">🔐 SHA-256 Checksum:</span>
-                    <code class="hash-string" title="File integrity hash"
-                        >{{ .Hash }}</code
-                    >
+                    <code class="hash-string" title="File integrity hash">{{ .Hash }}</code>
                 </div>
-                {{ end }}
             </main>
         </div>
     </body>
