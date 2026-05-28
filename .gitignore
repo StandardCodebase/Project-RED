@@ -17,3 +17,5 @@ Thumbs.db
 
 # remove py venv
 venv-podman
+
+tmp
