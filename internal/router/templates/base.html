@@ -1,79 +1,65 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{{ .Site }} - {{ .Title }}</title>
-        <link rel="stylesheet" href="/static/reset.css" />
-        <link rel="stylesheet" href="/static/layout.css" />
-        <link rel="stylesheet" href="/static/nav.css" />
-        <link rel="stylesheet" href="/static/article.css" />
-        <!-- Optional: add a favicon or additional meta tags -->
-    </head>
-    <body>
-        <div id="wrap">
-            <nav id="sidebar">
-                {{ range $topName, $section := .Nav }}
-                <div class="nav-heading">{{ $section.Name }}</div>
-                <div class="nav-group">
-                    {{ range $art := $section.Articles }}
-                    <a href="{{ $art.Path }}" class="nav-item"
-                        >{{ $art.Title }}</a
-                    >
-                    {{ end }} {{ range $subName, $subSection := $section.Sub }}
-                    <div class="nav-sub-heading">{{ $subSection.Name }}</div>
-                    {{ range $art := $subSection.Articles }}
-                    <a href="{{ $art.Path }}" class="nav-item sub-item"
-                        >{{ $art.Title }}</a
-                    >
-                    {{ end }} {{ end }}
-                </div>
-                {{ end }}
-            </nav>
 
-            <main id="main">
-                {{ if .Crumb }}
-                <div class="breadcrumb">
-                    <a href="/">Home</a>
-                    {{ range $i, $c := .Crumb }}
-                    <span class="sep">
-                        <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </span>
-                    <a href="{{ $c.Path }}">{{ $c.Label }}</a>
-                    {{ end }}
-                </div>
-                {{ end }}
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ .Site }} - {{ .Title }}</title>
+  <!-- Optional: add a favicon or additional meta tags -->
+</head>
 
-                <div class="security-header">
-                    {{ if .Verified }}
-                    <div class="badge verified">
-                        ✅ Verified Contributor: <strong>{{ .Author }}</strong>
-                    </div>
-                    {{ else }}
-                    <div class="badge unverified">
-                        ⚠️ Unverified / Unknown Origin
-                    </div>
-                    {{ end }}
-                </div>
+<body>
+  <div id="wrap">
+    <nav id="sidebar">
+      {{ range $topName, $section := .Nav }}
+      <div class="nav-heading">{{ $section.Name }}</div>
+      <div class="nav-group">
+        {{ range $art := $section.Articles }}
+        <a href="{{ $art.Path }}" class="nav-item">{{ $art.Title }}</a>
+        {{ end }} {{ range $subName, $subSection := $section.Sub }}
+        <div class="nav-sub-heading">{{ $subSection.Name }}</div>
+        {{ range $art := $subSection.Articles }}
+        <a href="{{ $art.Path }}" class="nav-item sub-item">{{ $art.Title }}</a>
+        {{ end }} {{ end }}
+      </div>
+      {{ end }}
+    </nav>
 
-                <div class="article-content">{{ .Body }}</div>
+    <main id="main">
+      {{ if .Crumb }}
+      <div class="breadcrumb">
+        <a href="/">Home</a>
+        {{ range $i, $c := .Crumb }}
+        <span class="sep">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </span>
+        <a href="{{ $c.Path }}">{{ $c.Label }}</a>
+        {{ end }}
+      </div>
+      {{ end }}
 
-                <div class="hash-footer">
-                    <span class="hash-label">🔐 SHA-256 Checksum:</span>
-                    <code class="hash-string" title="File integrity hash"
-                        >{{ .Hash }}</code
-                    >
-                </div>
-            </main>
+      <div class="security-header">
+        {{ if .Verified }}
+        <div class="badge verified">
+          ✅ Verified Contributor: <strong>{{ .Author }}</strong>
         </div>
-    </body>
+        {{ else }}
+        <div class="badge unverified">
+          ⚠️ Unverified / Unknown Origin
+        </div>
+        {{ end }}
+      </div>
+
+      <div class="article-content">{{ .Body }}</div>
+
+      <div class="hash-footer">
+        <span class="hash-label">🔐 SHA-256 Checksum:</span>
+        <code class="hash-string" title="File integrity hash">{{ .Hash }}</code>
+      </div>
+    </main>
+  </div>
+</body>
+
 </html>
