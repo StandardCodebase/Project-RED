@@ -1,0 +1,14 @@
+{
+  "addr": ":8080",
+  "siteName": "RED Engine",
+  "dataDir": "data",
+  "sourceURL": "",
+  "sourceType": "",
+  "adminToken": "Unq1ZOmCICydwDRuQmBMfY1p",
+  "startupSync": [
+    {
+      "url": "https://github.com/mundimark/awesome-markdown/archive/HEAD.zip",
+      "filename": "Awesome Markdown"
+    }
+  ]
+}

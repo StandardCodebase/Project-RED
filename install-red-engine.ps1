@@ -41,7 +41,7 @@ if (-Not (Test-Path "config.json")) {
     $DefaultConfig = @{
         addr = ":8080"
         siteName = "RED Engine"
-        dataDir = "/app/data"
+        dataDir = "data"
         adminToken = $NewToken
         startupSync = @()
     }

@@ -62,7 +62,7 @@ func main() {
 		for _, sync := range cfg.StartupSync {
 			log.Printf("Startup Sync: Fetching %s...", sync.Filename)
 
-			// Establish the destination filepath directly inside the core data root
+			// FIX: Establish the destination filepath directly inside the core data root
 			destinationPath := filepath.Join(cfg.DataDir, sync.Filename)
 
 			if err := executeSync(client, sync.URL, destinationPath); err != nil {
@@ -98,7 +98,7 @@ func executeSync(client *http.Client, targetURL, destPath string) error {
 		if strings.HasSuffix(lowerURL, ".zip") {
 			srcType = "zip"
 		}
-		// FIX: Stripped out the hardcoded 'filepath.Join("data", destPath)'
+		// FIX: Stripped out the hardcoded 'filepath.Join("data", ...)'
 		return fetch.Pull(targetURL, srcType, destPath)
 	}
 
@@ -118,7 +118,7 @@ func executeSync(client *http.Client, targetURL, destPath string) error {
 		return os.ErrPermission
 	}
 
-	// FIX: Stripped out the hardcoded 'filepath.Join("data", destPath)'
+	// FIX: Use destPath directly
 	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 		return err
 	}

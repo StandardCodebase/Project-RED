@@ -39,7 +39,7 @@ if [ ! -f "config.json" ]; then
 {
   "addr": ":8080",
   "siteName": "RED Engine",
-  "dataDir": "/app/data",
+  "dataDir": "data",
   "adminToken": "$NEW_TOKEN",
   "startupSync": []
 }

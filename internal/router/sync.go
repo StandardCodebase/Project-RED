@@ -91,7 +91,7 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// FIX: Final Fallback - Removed the hardcoded "remote" folder nesting
+	// FIX: Remove "remote" from the fallback
 	if targetSubPath == "." || targetSubPath == "" || strings.HasPrefix(targetSubPath, "..") || filepath.IsAbs(targetSubPath) {
 		targetSubPath = "sync-" + time.Now().Format("20060102150405")
 	}
