@@ -31,7 +31,7 @@
                 {{ end }}
             </nav>
 
-            <main id="main">
+<main id="main">
                 {{ if .Crumb }}
                 <div class="breadcrumb">
                     <a href="/">Home</a>
@@ -53,26 +53,30 @@
                 </div>
                 {{ end }}
 
+                {{ if .Hash }}
                 <div class="security-header">
                     {{ if .Verified }}
-    <div class="badge verified" title="Cryptographically Verified">
-        ✅ Verified Contributor: {{ .Author }}
-    </div>
-{{ else if .VerificationError }}
-    <div class="badge unverified" title="{{ .VerificationError }}" style="cursor: help;">
-        ⚠️ Unverified (Hover for reason)
-    </div>
-{{ end }}
+                        <div class="badge verified" title="Cryptographically Verified">
+                            ✅ Verified Contributor: {{ .Author }}
+                        </div>
+                    {{ else }}
+                        <div class="badge unverified" title="{{ if .VerificationError }}{{ .VerificationError }}{{ else }}File signature not found or invalid{{ end }}" style="cursor: help;">
+                            ⚠️ Unverified (Hover for reason)
+                        </div>
+                    {{ end }}
                 </div>
+                {{ end }}
 
                 <div class="article-content">{{ .Body }}</div>
 
+                {{ if .Hash }}
                 <div class="hash-footer">
                     <span class="hash-label">🔐 SHA-256 Checksum:</span>
                     <code class="hash-string" title="File integrity hash"
                         >{{ .Hash }}</code
                     >
                 </div>
+                {{ end }}
             </main>
         </div>
     </body>
