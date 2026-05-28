@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"net"
 	"strings"
 	"time"
 
@@ -43,14 +44,22 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid URL scheme", http.StatusBadRequest)
 		return
 	}
-	host := strings.ToLower(parsedURL.Host)
-	if strings.Contains(host, "localhost") || strings.Contains(host, "127.0.0.1") || strings.HasPrefix(host, "10.") || strings.HasPrefix(host, "192.168.") {
-		http.Error(w, "Local network imports are strictly forbidden", http.StatusForbidden)
-		return
+	hostname := parsedURL.Hostname()
+	addrs, err := net.LookupHost(hostname)
+	if err != nil {
+	    http.Error(w, "Failed to resolve hostname", http.StatusBadRequest)
+	    return
+	}
+	for _, addr := range addrs {
+	    ip := net.ParseIP(addr)
+	    if ip == nil || ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+	        http.Error(w, "Local network imports are strictly forbidden", http.StatusForbidden)
+	        return
+	    }
 	}
 
 	// --- NEW: SMART GITHUB URL REWRITER ---
-	if host == "github.com" {
+	if parsedURL.Host == "github.com" {
 		pathParts := strings.Split(strings.Trim(parsedURL.Path, "/"), "/")
 		if len(pathParts) == 2 {
 			// If someone pasted a Repo home page. Auto-convert to a ZIP archive of the default branch.
