@@ -43,6 +43,7 @@
       {{ end }}
 
       <div class="flex flex-row gap-4 security-header m-8">
+        {{if .Verified}}
         <div
           class="flex flex-row gap-4 align-middle badge verified bg-emerald-200 px-6 p-3 rounded-xl text-black border-2 border-emerald-600">
           <svg class="text-emerald-900" xmlns="http://www.w3.org/2000/svg" width="4em" height="4em" viewBox="0 0 24 24">
@@ -53,6 +54,7 @@
           <p class="text-emerald-950 justify-center m-auto"> Verified Contributor: <strong>{{ .Author }}</strong></p>
 
         </div>
+        {{else}}
         <div
           class="flex flex-row gap-4 align-middle justify-center badge unverified bg-orange-100 border-2 border-orange-600 px-6 p-3 rounded-xl text-black">
           <svg class="text-red-800 stroke-3" xmlns="http://www.w3.org/2000/svg" width="4em" height="4em"
@@ -61,10 +63,11 @@
             <path fill="currentColor"
               d="M929 755.8L574.6 203.3a74 74 0 0 0-62.6-32.6a74 74 0 0 0-62.6 32.6L95 755.8a59 59 0 0 0 0 65a74 74 0 0 0 62.6 32.6h708.8c25.8 0 49.7-12.4 62.6-32.5s12.9-45 0-65M554.7 768h-85.4v-85.3h85.4zm0-426.7V640h-85.4V341.3z" />
           </svg>
-          <p class="justify-center m-auto">
+          <p class="font-black justify-center m-auto text-red-950">
             Unverified / Unknown Origin
           </p>
         </div>
+        {{end}}
       </div>
 
       <!-- Article Content -->
