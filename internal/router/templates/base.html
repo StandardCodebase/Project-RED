@@ -10,8 +10,8 @@
   <!-- Optional: add a favicon or additional meta tags -->
 </head>
 
-<body>
-  <div id="wrap" class="dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 min-h-screen">
+<body class="dark:bg-neutral-950 dark:text-neutral-100 min-h-screen">
+  <div id="wrap">
     <nav id="sidebar">
       {{ range $topName, $section := .Nav }}
       <div class="nav-heading">{{ $section.Name }}</div>
@@ -42,16 +42,29 @@
       </div>
       {{ end }}
 
-      <div class="security-header">
-        {{ if .Verified }}
-        <div class="badge verified">
-          ✅ Verified Contributor: <strong>{{ .Author }}</strong>
+      <div class="flex flex-row gap-4 security-header m-8">
+        <div
+          class="flex flex-row gap-4 align-middle badge verified bg-emerald-200 px-6 p-3 rounded-xl text-black border-2 border-emerald-600">
+          <svg class="text-emerald-900" xmlns="http://www.w3.org/2000/svg" width="4em" height="4em" viewBox="0 0 24 24">
+            <path d="M0 0h24v24H0z" fill="none" />
+            <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M20 4L9 15m12 4H3m6-4l-5-5" />
+          </svg>
+          <p class="text-emerald-950 justify-center m-auto"> Verified Contributor: <strong>{{ .Author }}</strong></p>
+
         </div>
-        {{ else }}
-        <div class="badge unverified">
-          ⚠️ Unverified / Unknown Origin
+        <div
+          class="flex flex-row gap-4 align-middle justify-center badge unverified bg-orange-100 border-2 border-orange-600 px-6 p-3 rounded-xl text-black">
+          <svg class="text-red-800 stroke-3" xmlns="http://www.w3.org/2000/svg" width="4em" height="4em"
+            viewBox="0 0 1024 1024">
+            <path d="M0 0h1024v1024H0z" fill="none" />
+            <path fill="currentColor"
+              d="M929 755.8L574.6 203.3a74 74 0 0 0-62.6-32.6a74 74 0 0 0-62.6 32.6L95 755.8a59 59 0 0 0 0 65a74 74 0 0 0 62.6 32.6h708.8c25.8 0 49.7-12.4 62.6-32.5s12.9-45 0-65M554.7 768h-85.4v-85.3h85.4zm0-426.7V640h-85.4V341.3z" />
+          </svg>
+          <p class="justify-center m-auto">
+            Unverified / Unknown Origin
+          </p>
         </div>
-        {{ end }}
       </div>
 
       <!-- Article Content -->
@@ -63,9 +76,11 @@
       </div>
 
 
-      <div class="hash-footer">
+      <div class="hash-footer m-8">
         <span class="hash-label">🔐 SHA-256 Checksum:</span>
+        {{if .Hash}}
         <code class="hash-string" title="File integrity hash">{{ .Hash }}</code>
+        {{end}}
       </div>
     </main>
   </div>
