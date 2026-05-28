@@ -49,10 +49,11 @@ func New(s *store.Store, cfg *config.Config, cfgPath string) http.Handler {
 	mux.HandleFunc("/-/search-index.json", h.searchIndex) // <--- ADD THIS LINE
 	mux.HandleFunc("/-/source/", h.source)
 	mux.HandleFunc("/-/download/", h.download)
+	// NEW: Generic Webhook Endpoint (Security deferred)
+	mux.HandleFunc("/-/webhook/sync", h.webhookSync)
 
-	// The Admin UI (Unprotected so the login screen renders)
+	// The Admin UI
 	mux.HandleFunc("/-/admin", h.adminUI)
-
 	// SECURE ROUTES: Wrapped in the adminOnly middleware
 	mux.HandleFunc("/-/reload", h.adminOnly(h.reload))
 	mux.HandleFunc("/-/import", h.adminOnly(h.importRemote))

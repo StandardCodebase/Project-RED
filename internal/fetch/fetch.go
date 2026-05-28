@@ -13,6 +13,12 @@ import (
 )
 
 func Pull(url, srcType, destDir string) error {
+	// --- NEW: Native Git Intercept ---
+	if srcType == "git" {
+		return pullGit(url, destDir)
+	}
+	// ---------------------------------
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return err

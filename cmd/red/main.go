@@ -22,6 +22,7 @@ func main() {
 	flag.Parse()
 
 	cfg := config.Default()
+
 	if _, err := os.Stat(*cfgPath); err == nil {
 		loaded, err := config.Load(*cfgPath)
 		if err != nil {
@@ -93,8 +94,17 @@ func main() {
 func executeSync(client *http.Client, targetURL, destPath string) error {
 	lowerURL := strings.ToLower(targetURL)
 
+	// --- NEW: Detect Native Git Repositories ---
+
+	if strings.HasSuffix(lowerURL, ".git") {
+		return fetch.Pull(targetURL, "git", destPath)
+	}
+
+	// -------------------------------------------
+
 	if strings.HasSuffix(lowerURL, ".tar.gz") || strings.HasSuffix(lowerURL, ".zip") {
 		srcType := "tar.gz"
+
 		if strings.HasSuffix(lowerURL, ".zip") {
 			srcType = "zip"
 		}

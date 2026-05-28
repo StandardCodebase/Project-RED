@@ -99,17 +99,20 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 	// Formulate the destination path straight inside the engine's root store directory
 	destinationDir := filepath.Join(h.store.DataDir(), targetSubPath)
 
-	// 3. Determine if it is a single file or a compressed multi-file bundle
 	lowerURL := strings.ToLower(req.URL)
 
-	if strings.HasSuffix(lowerURL, ".tar.gz") || strings.HasSuffix(lowerURL, ".zip") {
-		srcType := "tar.gz"
-		if strings.HasSuffix(lowerURL, ".zip") {
-			srcType = "zip"
-		}
+	srcType := "raw"
+	if strings.HasSuffix(lowerURL, ".git") {
+		srcType = "git"
+	} else if strings.HasSuffix(lowerURL, ".tar.gz") {
+		srcType = "tar.gz"
+	} else if strings.HasSuffix(lowerURL, ".zip") {
+		srcType = "zip"
+	}
 
+	if srcType == "git" || srcType == "tar.gz" || srcType == "zip" {
 		if err := fetch.Pull(req.URL, srcType, destinationDir); err != nil {
-			http.Error(w, "Failed to pull and unpack remote directory: "+err.Error(), http.StatusBadGateway)
+			http.Error(w, "Failed to pull remote repository: "+err.Error(), http.StatusBadGateway)
 			return
 		}
 	} else {
