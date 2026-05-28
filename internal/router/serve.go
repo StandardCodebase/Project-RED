@@ -7,27 +7,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/RED-Collective/red-engine/internal/store"
+	"github.com/RED-Collective/red-engine/internal/models"
 )
-
-type crumb struct {
-	Label string
-	Path  string
-}
-
-type pageData struct {
-	Site              string
-	Nav               map[string]*store.Section
-	Body              template.HTML
-	Title             string
-	Path              string
-	TopCat            string
-	Crumb             []crumb
-	Verified          bool
-	Author            string
-	Hash              string
-	VerificationError string
-}
 
 func capitalize(s string) string {
 	s = strings.ReplaceAll(s, "-", " ")
@@ -41,13 +22,19 @@ func capitalize(s string) string {
 
 func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
+
+	// Handle home page routing
+	if path == "/" {
+		path = "/root"
+	}
+
 	parts := strings.Split(strings.Trim(path, "/"), "/")
 	topCat := ""
 	if parts[0] != "" {
 		topCat = parts[0]
 	}
 
-	d := pageData{
+	d := models.PageData{
 		Site:   h.cfg.SiteName,
 		Nav:    h.store.Root(),
 		Path:   path,
@@ -55,25 +42,33 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch {
-	case path == "/":
+	case path == "/root":
 		d.Body = template.HTML(`<div class="article"><h1>` + h.cfg.SiteName + `</h1><p>The free practical knowledge base. Choose a topic from the sidebar.</p></div>`)
 
-	case len(parts) == 1 && topCat != "":
+	case len(parts) == 1 && topCat != "root":
 		sec, ok := h.store.Root()[topCat]
 		if !ok {
 			http.NotFound(w, r)
 			return
 		}
 		d.Title = capitalize(topCat)
-		d.Crumb = []crumb{{Label: capitalize(topCat), Path: "/" + topCat}}
+		d.Crumb = []models.Crumb{{Label: capitalize(topCat), Path: "/" + topCat}}
 		d.Body = template.HTML(sectionHTML(sec))
 
 	default:
 		art := h.store.Get(path)
 		if art == nil {
+			if strings.HasSuffix(path, ".md") {
+				clean := strings.TrimSuffix(path, ".md")
+				art = h.store.Get(clean)
+			}
+		}
+
+		if art == nil {
 			http.NotFound(w, r)
 			return
 		}
+
 		d.Title = capitalize(parts[len(parts)-1])
 		d.Crumb = buildCrumbs(parts)
 		d.Body = art.Body
@@ -88,18 +83,18 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-func buildCrumbs(parts []string) []crumb {
-	crumbs := make([]crumb, 0, len(parts))
+
+func buildCrumbs(parts []string) []models.Crumb {
+	crumbs := make([]models.Crumb, 0, len(parts))
 	path := ""
 	for _, p := range parts {
 		path += "/" + p
-		crumbs = append(crumbs, crumb{Label: capitalize(p), Path: path})
+		crumbs = append(crumbs, models.Crumb{Label: capitalize(p), Path: path})
 	}
 	return crumbs
 }
 
-func sectionHTML(sec *store.Section) string {
-
+func sectionHTML(sec *models.Section) string {
 	var b strings.Builder
 	b.Grow(1024)
 

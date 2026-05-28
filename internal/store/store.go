@@ -13,35 +13,21 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/RED-Collective/red-engine/internal/models"
 	"github.com/RED-Collective/red-engine/internal/render"
+	"github.com/fsnotify/fsnotify"
 )
-
-type Article struct {
-	Path              string
-	Title             string
-	Body              template.HTML
-	Hash              string
-	Verified          bool
-	Author            string
-	VerificationError string
-}
-
-type Section struct {
-	Name     string
-	Articles []*Article
-	Sub      map[string]*Section
-}
 
 type Store struct {
 	dataDir string
-	nav     map[string]*Section
+	nav     map[string]*models.Section
 	mu      sync.RWMutex
 }
 
 func New(dataDir string) *Store {
 	return &Store{
 		dataDir: dataDir,
-		nav:     make(map[string]*Section),
+		nav:     make(map[string]*models.Section),
 	}
 }
 
@@ -49,48 +35,65 @@ func (s *Store) DataDir() string {
 	return s.dataDir
 }
 
-// --- Cryptographic Structs matching the Obsidian Plugin ---
-type Contributor struct {
-	Name      string `json:"name"`
-	PublicKey string `json:"public_key"`
-}
-
-type ManifestEntry struct {
-	FileHash  string `json:"file_hash"`
-	Hash      string `json:"hash"` // Fallback support
-	PublicKey string `json:"public_key"`
-	Signature string `json:"signature"`
-}
-
-type Manifest struct {
-	Files map[string]ManifestEntry `json:"files"`
-}
-
-// Helper to unmarshal flexible manifest format
-func parseManifestJSON(data []byte) map[string]ManifestEntry {
-	result := make(map[string]ManifestEntry)
-
-	// Try wrapped format first
-	var wrapped Manifest
+func parseManifestJSON(data []byte) map[string]models.ManifestEntry {
+	result := make(map[string]models.ManifestEntry)
+	var wrapped models.Manifest
 	if err := json.Unmarshal(data, &wrapped); err == nil && len(wrapped.Files) > 0 {
 		return wrapped.Files
 	}
-
-	// Try flat format: {filepath: entry, ...}
 	if err := json.Unmarshal(data, &result); err == nil {
 		return result
 	}
-
 	return result
+}
+
+func (s *Store) Watch() error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+
+	absDataDir, _ := filepath.Abs(s.dataDir)
+
+	filepath.WalkDir(absDataDir, func(path string, d fs.DirEntry, err error) error {
+		if err == nil && d.IsDir() {
+			watcher.Add(path)
+		}
+		return nil
+	})
+
+	go func() {
+		defer watcher.Close()
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove|fsnotify.Rename) != 0 {
+					log.Printf("🔄 File change detected: %s. Reloading store...", event.Name)
+					s.Reload()
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Println("⚠️ Watcher error:", err)
+			}
+		}
+	}()
+
+	log.Printf("[DEBUG] File watcher started on %s", absDataDir)
+	return nil
 }
 
 func (s *Store) Reload() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// 1. Load the Trusted Public Keys from contributors.json
+
 	trustedKeys := make(map[string]string)
 	if trustData, err := os.ReadFile("contributors.json"); err == nil {
-		var contributors []Contributor
+		var contributors []models.Contributor
 		if err := json.Unmarshal(trustData, &contributors); err == nil {
 			for _, c := range contributors {
 				trustedKeys[strings.ToLower(c.PublicKey)] = c.Name
@@ -100,26 +103,19 @@ func (s *Store) Reload() error {
 		log.Println("⚠️  Warning: contributors.json not found. Verification checks disabled.")
 	}
 
-	// 2. Pre-load all signatures from any manifest.json in the data directory
-	// Map by filepath for easier lookup
-	allSignatures := make(map[string]ManifestEntry)
+	allSignatures := make(map[string]models.ManifestEntry)
 	filepath.WalkDir(s.dataDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || filepath.Base(path) != "manifest.json" {
 			return nil
 		}
-
 		manifestData, err := os.ReadFile(path)
 		if err != nil {
-			log.Printf("Warning: cannot read manifest %s: %v", path, err)
 			return nil
 		}
-
 		manifest := parseManifestJSON(manifestData)
 		if len(manifest) == 0 {
 			return nil
 		}
-
-		// Get manifest directory relative to dataDir
 		manifestDir := filepath.Dir(path)
 		relManifestDir, err := filepath.Rel(s.dataDir, manifestDir)
 		if err != nil {
@@ -142,12 +138,7 @@ func (s *Store) Reload() error {
 		return nil
 	})
 
-	log.Printf("[DEBUG] Loaded %d signature entries", len(allSignatures))
-	for k := range allSignatures {
-		log.Printf("[DEBUG]   %s", k)
-	}
-
-	newNav := make(map[string]*Section)
+	newNav := make(map[string]*models.Section)
 
 	err := filepath.WalkDir(s.dataDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || filepath.Ext(path) != ".md" {
@@ -159,13 +150,6 @@ func (s *Store) Reload() error {
 			return nil
 		}
 
-		relativePath, err := filepath.Rel(s.dataDir, path)
-		if err != nil {
-			return nil
-		}
-		relativePath = filepath.ToSlash(relativePath)
-
-		// 3. Calculate SHA-256
 		hashBytes := sha256.Sum256(content)
 		fileHash := hex.EncodeToString(hashBytes[:])
 
@@ -174,7 +158,11 @@ func (s *Store) Reload() error {
 			return nil
 		}
 
-		// 4. Ed25519 Cryptographic Verification
+		rel, _ := filepath.Rel(s.dataDir, path)
+		relativePath := strings.TrimPrefix(filepath.ToSlash(rel), "/")
+
+		cleanPath := strings.TrimSuffix(relativePath, ".md")
+
 		isVerified := false
 		authorName := "Unverified / Unknown Origin"
 		verifyErr := "File signature not found in manifest"
@@ -196,7 +184,7 @@ func (s *Store) Reload() error {
 							ed25519.Verify(pubBytes, hashBytes[:], sigBytes) {
 							isVerified = true
 							authorName = trustedAuthor
-							verifyErr = "" // Clear error on success
+							verifyErr = ""
 						} else {
 							verifyErr = "Invalid Signature: Cryptographic verification failed"
 						}
@@ -211,31 +199,31 @@ func (s *Store) Reload() error {
 			}
 		}
 
-		// Build Article Structure
-		cleanPath := strings.TrimSuffix(relativePath, ".md")
-		parts := strings.Split(cleanPath, "/")
-		title := parts[len(parts)-1] // Default to the filename as the title
+		parts := strings.Split(filepath.ToSlash(cleanPath), "/")
 
-		art := &Article{
+		title := parts[len(parts)-1]
+		title = strings.ReplaceAll(title, "-", " ")
+		title = strings.Title(title)
+
+		art := &models.Article{
 			Path:              "/" + filepath.ToSlash(cleanPath),
 			Title:             title,
 			Body:              template.HTML(res.HTMLContent),
 			Hash:              fileHash,
 			Verified:          isVerified,
 			Author:            authorName,
-			VerificationError: verifyErr, // <--- PASS THE ERROR HERE
+			VerificationError: verifyErr,
 		}
 
-		// Tree Building
 		if len(parts) == 1 {
 			if newNav["root"] == nil {
-				newNav["root"] = &Section{Name: "root"}
+				newNav["root"] = &models.Section{Name: "root"}
 			}
 			newNav["root"].Articles = append(newNav["root"].Articles, art)
 		} else {
 			secName := parts[0]
 			if newNav[secName] == nil {
-				newNav[secName] = &Section{Name: secName, Sub: make(map[string]*Section)}
+				newNav[secName] = &models.Section{Name: secName, Sub: make(map[string]*models.Section)}
 			}
 			sec := newNav[secName]
 			if len(parts) == 2 {
@@ -243,7 +231,7 @@ func (s *Store) Reload() error {
 			} else {
 				subName := parts[1]
 				if sec.Sub[subName] == nil {
-					sec.Sub[subName] = &Section{Name: subName}
+					sec.Sub[subName] = &models.Section{Name: subName}
 				}
 				sec.Sub[subName].Articles = append(sec.Sub[subName].Articles, art)
 			}
@@ -259,13 +247,13 @@ func (s *Store) Reload() error {
 	return nil
 }
 
-func (s *Store) Nav() map[string]*Section {
+func (s *Store) Nav() map[string]*models.Section {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.nav
 }
 
-func (s *Store) Get(path string) *Article {
+func (s *Store) Get(path string) *models.Article {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -302,11 +290,11 @@ func (s *Store) Get(path string) *Article {
 	return nil
 }
 
-func (s *Store) Root() map[string]*Section {
+func (s *Store) Root() map[string]*models.Section {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	copy := make(map[string]*Section, len(s.nav))
+	copy := make(map[string]*models.Section, len(s.nav))
 	for k, v := range s.nav {
 		copy[k] = v
 	}

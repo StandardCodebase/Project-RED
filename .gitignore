@@ -6,6 +6,7 @@ red
 
 data/
 test-integrity.sh
+set-ports.sh
 
 
 
