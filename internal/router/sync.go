@@ -3,11 +3,11 @@ package router
 import (
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"net"
 	"strings"
 	"time"
 
@@ -21,23 +21,20 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	providedToken := r.Header.Get("X-Admin-Token")
-	if h.cfg.AdminToken != "" && providedToken != h.cfg.AdminToken {
-		http.Error(w, "Unauthorized: Invalid Admin Token", http.StatusUnauthorized)
-		return
-	}
+	// Note: We removed the manual Admin Token checks here because
+	// the adminOnly middleware in router.go already secures this endpoint!
 
 	var req struct {
 		URL           string `json:"url"`
 		Filename      string `json:"filename"` // Used as the clean directory or path name
 		SaveToStartup bool   `json:"saveToStartup"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
 		return
 	}
 
-	// 1. SSRF Protection
 	// 1. SSRF Protection & URL Parsing
 	parsedURL, err := url.Parse(req.URL)
 	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
@@ -47,18 +44,18 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 	hostname := parsedURL.Hostname()
 	addrs, err := net.LookupHost(hostname)
 	if err != nil {
-	    http.Error(w, "Failed to resolve hostname", http.StatusBadRequest)
-	    return
+		http.Error(w, "Failed to resolve hostname", http.StatusBadRequest)
+		return
 	}
 	for _, addr := range addrs {
-	    ip := net.ParseIP(addr)
-	    if ip == nil || ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
-	        http.Error(w, "Local network imports are strictly forbidden", http.StatusForbidden)
-	        return
-	    }
+		ip := net.ParseIP(addr)
+		if ip == nil || ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			http.Error(w, "Local network imports are strictly forbidden", http.StatusForbidden)
+			return
+		}
 	}
 
-	// --- NEW: SMART GITHUB URL REWRITER ---
+	// --- SMART GITHUB URL REWRITER ---
 	if parsedURL.Host == "github.com" {
 		pathParts := strings.Split(strings.Trim(parsedURL.Path, "/"), "/")
 		if len(pathParts) == 2 {
@@ -94,12 +91,12 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Final Fallback
+	// FIX: Final Fallback - Removed the hardcoded "remote" folder nesting
 	if targetSubPath == "." || targetSubPath == "" || strings.HasPrefix(targetSubPath, "..") || filepath.IsAbs(targetSubPath) {
-		targetSubPath = filepath.Join("remote", "sync-"+time.Now().Format("20060102150405"))
+		targetSubPath = "sync-" + time.Now().Format("20060102150405")
 	}
 
-	// Formulate the destination path inside the engine's store directory
+	// Formulate the destination path straight inside the engine's root store directory
 	destinationDir := filepath.Join(h.store.DataDir(), targetSubPath)
 
 	// 3. Determine if it is a single file or a compressed multi-file bundle
@@ -116,8 +113,7 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// if it's a single raw markdown file Save it cleanly to the specified directory path
-		//
+		// If it's a single raw markdown file, save it cleanly
 		if err := os.MkdirAll(filepath.Dir(destinationDir), 0755); err != nil {
 			http.Error(w, "Failed to create directory structure", http.StatusInternalServerError)
 			return
@@ -172,7 +168,7 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 	if req.SaveToStartup {
 		h.cfg.StartupSync = append(h.cfg.StartupSync, config.RemoteSync{
 			URL:      req.URL,
-			Filename: targetSubPath,
+			Filename: targetSubPath, // This will now save a flat name like "awesome-markdown"
 		})
 		if err := h.cfg.Save(h.cfgPath); err != nil {
 			http.Error(w, "Synced successfully, but config save failed", http.StatusInternalServerError)
@@ -187,12 +183,6 @@ func (h *handler) importRemote(w http.ResponseWriter, r *http.Request) {
 // --- SECURE DASHBOARD ENDPOINTS ---
 
 func (h *handler) adminConfig(w http.ResponseWriter, r *http.Request) {
-	providedToken := r.Header.Get("X-Admin-Token")
-	if h.cfg.AdminToken != "" && providedToken != h.cfg.AdminToken {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(h.cfg.StartupSync)
 }
@@ -203,15 +193,9 @@ func (h *handler) adminRemove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	providedToken := r.Header.Get("X-Admin-Token")
-	if h.cfg.AdminToken != "" && providedToken != h.cfg.AdminToken {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
 	var req struct {
 		Filename         string `json:"filename"`
-		DeleteLocalFiles bool   `json:"deleteLocalFiles"` // <-- NEW FLAG
+		DeleteLocalFiles bool   `json:"deleteLocalFiles"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)

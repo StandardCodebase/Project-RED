@@ -30,7 +30,6 @@ func main() {
 		cfg = loaded
 	}
 
-	// --- NEW: Security Token Warning ---
 	if cfg.AdminToken == "" || cfg.AdminToken == "secret123" {
 		log.Println("=================================================================")
 		log.Println("⚠️  SECURITY WARNING: Using default or missing Admin Token!    ⚠️")
@@ -41,7 +40,6 @@ func main() {
 		log.Println("Windows:     .\\manage-token.ps1")
 		log.Println("=================================================================")
 	}
-	// -----------------------------------
 
 	// 1. Core Knowledge Base Pulling
 	if *pull && cfg.SourceURL != "" {
@@ -52,20 +50,22 @@ func main() {
 		log.Println("fetch complete")
 	}
 
-	// 2. Startup Sync (Ported from Legacy Gateway)
+	// 2. Startup Sync
 	if len(cfg.StartupSync) > 0 {
-		remoteDir := filepath.Join(cfg.DataDir, "remote")
-
-		// Check for permission errors right here before proceeding
-		if err := os.MkdirAll(remoteDir, 0755); err != nil {
-			log.Fatalf("CRITICAL: Failed to create remote directory. Check volume permissions: %v", err)
+		// FIX: Use DataDir directly. NO "remote" folder.
+		if err := os.MkdirAll(cfg.DataDir, 0755); err != nil {
+			log.Fatalf("CRITICAL: Failed to create data directory. Check volume permissions: %v", err)
 		}
 
 		client := &http.Client{Timeout: 15 * time.Second}
 
 		for _, sync := range cfg.StartupSync {
 			log.Printf("Startup Sync: Fetching %s...", sync.Filename)
-			if err := executeSync(client, sync.URL, filepath.Join(remoteDir, sync.Filename)); err != nil {
+
+			// Establish the destination filepath directly inside the core data root
+			destinationPath := filepath.Join(cfg.DataDir, sync.Filename)
+
+			if err := executeSync(client, sync.URL, destinationPath); err != nil {
 				log.Printf("Startup Sync Error (%s): %v", sync.Filename, err)
 			} else {
 				log.Printf("Startup Sync: Successfully downloaded %s", sync.Filename)
@@ -79,17 +79,18 @@ func main() {
 		log.Fatalf("store: %v", err)
 	}
 
-	// 4. Start HTTP Server with the Refactored Router
+	// Start Hot Reload Watcher
+	if err := s.Watch(); err != nil {
+		log.Printf("⚠️ Warning: Could not start hot reloader: %v", err)
+	}
+
+	// 4. Start HTTP Server
 	h := router.New(s, &cfg, *cfgPath)
 	log.Printf("RED listening on %s", cfg.Addr)
 	log.Fatal(http.ListenAndServe(cfg.Addr, h))
 }
 
-func executeSync(client *http.Client, targetURL, destSubPath string) error {
-	// Reconstruct target file paths relative to data root directory
-	// Note: main.go has context of cfg.DataDir
-
-	// Let's resolve the path correctly depending on the initialization parameters
+func executeSync(client *http.Client, targetURL, destPath string) error {
 	lowerURL := strings.ToLower(targetURL)
 
 	if strings.HasSuffix(lowerURL, ".tar.gz") || strings.HasSuffix(lowerURL, ".zip") {
@@ -97,11 +98,10 @@ func executeSync(client *http.Client, targetURL, destSubPath string) error {
 		if strings.HasSuffix(lowerURL, ".zip") {
 			srcType = "zip"
 		}
-		// Pull the dynamic folder contents using the internal archive worker
-		return fetch.Pull(targetURL, srcType, filepath.Join("data", destSubPath))
+		// FIX: Stripped out the hardcoded 'filepath.Join("data", destPath)'
+		return fetch.Pull(targetURL, srcType, destPath)
 	}
 
-	// Otherwise, proceed with single file retrieval flow
 	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
 	if err != nil {
 		return err
@@ -118,12 +118,12 @@ func executeSync(client *http.Client, targetURL, destSubPath string) error {
 		return os.ErrPermission
 	}
 
-	fullFilePath := filepath.Join("data", destSubPath)
-	if err := os.MkdirAll(filepath.Dir(fullFilePath), 0755); err != nil {
+	// FIX: Stripped out the hardcoded 'filepath.Join("data", destPath)'
+	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 		return err
 	}
 
-	outFile, err := os.Create(fullFilePath)
+	outFile, err := os.Create(destPath)
 	if err != nil {
 		return err
 	}
