@@ -1,58 +1,66 @@
 package router
 
 import (
-	"encoding/json"
+	"log"
 	"net/http"
+	"path/filepath"
+	"strings"
+
+	"github.com/RED-Collective/red-engine/internal/fetch"
 )
 
-// SearchItem represents a single searchable entry in the client-side index
-type SearchItem struct {
-	Title string `json:"title"`
-	Path  string `json:"path"`
-}
-
-func (h *handler) health(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "ok",
-		"site":   h.cfg.SiteName,
-	})
-}
-
-func (h *handler) manifest(w http.ResponseWriter, r *http.Request) {
-	m := map[string]map[string]string{}
-
-	for _, sec := range h.store.Root() {
-		for _, a := range sec.Articles {
-			m[a.Path] = map[string]string{"title": a.Title}
-		}
-		for _, sub := range sec.Sub {
-			for _, a := range sub.Articles {
-				m[a.Path] = map[string]string{"title": a.Title}
-			}
-		}
+func (h *handler) webhookSync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(m)
-}
+	log.Println("🔄 Webhook received from GitHub. Syncing tracked repositories...")
 
-// searchIndex provides a flat list of articles for real-time frontend filtering
-func (h *handler) searchIndex(w http.ResponseWriter, r *http.Request) {
-	var index []SearchItem
+	// We launch this in a goroutine so we can immediately return a 200 OK
+	// to GitHub, preventing the webhook from timing out.
+	go func() {
+		successCount := 0
 
-	// Traverse the memory tree and build a flat array
-	for _, sec := range h.store.Root() {
-		for _, a := range sec.Articles {
-			index = append(index, SearchItem{Title: a.Title, Path: a.Path})
-		}
-		for _, sub := range sec.Sub {
-			for _, a := range sub.Articles {
-				index = append(index, SearchItem{Title: a.Title, Path: a.Path})
+		// 1. Loop through all tracked repositories in the configuration
+		for _, sync := range h.cfg.StartupSync {
+
+			// Determine the source type dynamically just like the importer does
+			lowerURL := strings.ToLower(sync.URL)
+			srcType := "raw"
+			if strings.HasSuffix(lowerURL, ".git") {
+				srcType = "git"
+			} else if strings.HasSuffix(lowerURL, ".tar.gz") {
+				srcType = "tar.gz"
+			} else if strings.HasSuffix(lowerURL, ".zip") {
+				srcType = "zip"
+			}
+
+			// Destination directly inside the data directory
+			destDir := filepath.Join(h.store.DataDir(), sync.Filename)
+
+			log.Printf("📥 Webhook triggering network pull for: %s", sync.Filename)
+
+			// Execute the actual download / git mirror operation
+			if err := fetch.Pull(sync.URL, srcType, destDir); err != nil {
+				log.Printf("⚠️ Failed to sync %s: %v", sync.Filename, err)
+			} else {
+				successCount++
 			}
 		}
-	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(index)
+		if successCount > 0 {
+			// 2. Hot-reload the memory map AFTER the files are successfully updated on disk
+			if err := h.store.Reload(); err != nil {
+				log.Printf("⚠️ Webhook sync completed, but memory index reload failed: %v", err)
+			} else {
+				log.Println("✅ Webhook sync complete. Memory index updated.")
+			}
+		} else {
+			log.Println("⚠️ Webhook finished, but no tracked repositories were successfully synced.")
+		}
+	}()
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Sync process initiated"))
 }

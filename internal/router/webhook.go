@@ -3,6 +3,10 @@ package router
 import (
 	"log"
 	"net/http"
+	"path/filepath"
+	"strings"
+
+	"github.com/RED-Collective/red-engine/internal/fetch"
 )
 
 func (h *handler) webhookSync(w http.ResponseWriter, r *http.Request) {
@@ -11,19 +15,49 @@ func (h *handler) webhookSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("🔄 Webhook received from GitHub. Syncing tracked repositories...")
+
 	// We launch this in a goroutine so we can immediately return a 200 OK
-	// to the Git server, preventing the webhook from timing out.
+	// to GitHub, preventing the webhook from timing out.
 	go func() {
-		log.Println("🔄 Webhook received! Triggering global knowledge base sync...")
+		successCount := 0
 
-		// TODO: In Phase 2, we will loop through h.cfg.StartupSync
-		// and run the native git pull commands here.
+		// 1. Loop through all tracked repositories in the configuration
+		for _, sync := range h.cfg.StartupSync {
 
-		// Hot-reload the memory map after sync
-		if err := h.store.Reload(); err != nil {
-			log.Printf("⚠️ Webhook sync completed, but memory reload failed: %v", err)
+			// Determine the source type dynamically just like the importer does
+			lowerURL := strings.ToLower(sync.URL)
+			srcType := "raw"
+			if strings.HasSuffix(lowerURL, ".git") {
+				srcType = "git"
+			} else if strings.HasSuffix(lowerURL, ".tar.gz") {
+				srcType = "tar.gz"
+			} else if strings.HasSuffix(lowerURL, ".zip") {
+				srcType = "zip"
+			}
+
+			// Destination directly inside the data directory
+			destDir := filepath.Join(h.store.DataDir(), sync.Filename)
+
+			log.Printf("📥 Webhook triggering network pull for: %s", sync.Filename)
+
+			// Execute the actual download / git mirror operation
+			if err := fetch.Pull(sync.URL, srcType, destDir); err != nil {
+				log.Printf("⚠️ Failed to sync %s: %v", sync.Filename, err)
+			} else {
+				successCount++
+			}
+		}
+
+		if successCount > 0 {
+			// 2. Hot-reload the memory map AFTER the files are successfully updated on disk
+			if err := h.store.Reload(); err != nil {
+				log.Printf("⚠️ Webhook sync completed, but memory index reload failed: %v", err)
+			} else {
+				log.Println("✅ Webhook sync complete. Memory index updated.")
+			}
 		} else {
-			log.Println("✅ Webhook sync complete. Memory index updated.")
+			log.Println("⚠️ Webhook finished, but no tracked repositories were successfully synced.")
 		}
 	}()
 
