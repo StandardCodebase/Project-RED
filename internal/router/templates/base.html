@@ -11,22 +11,41 @@
     </head>
     <body>
         <div id="wrap">
-            <nav id="sidebar">
-                {{ range $topName, $section := .Nav }}
-                <div class="nav-heading">{{ $section.Name }}</div>
-                <div class="nav-group">
-                    {{ range $art := $section.Articles }}
-                    <a href="{{ $art.Path }}" class="nav-item">{{ $art.Title }}</a>
-                    {{ end }} 
-                    
-                    {{ range $subName, $subSection := $section.Sub }}
-                    <div class="nav-sub-heading">{{ $subSection.Name }}</div>
-                    {{ range $art := $subSection.Articles }}
-                    <a href="{{ $art.Path }}" class="nav-item sub-item">{{ $art.Title }}</a>
-                    {{ end }} 
+<nav id="sidebar">
+                <div class="search-container" style="padding: 1rem; border-bottom: 1px solid #333;">
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="🔍 Search articles..." 
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #444; border-radius: 4px; background: #111; color: white; box-sizing: border-box; font-size: 0.9rem;"
+                        oninput="filterArticles()"
+                    />
+                </div>
+
+                <div id="sidebar-links">
+                    {{ range $topName, $section := .Nav }}
+                    <div class="nav-heading-group">
+                        <div class="nav-heading">{{ $section.Name }}</div>
+                        <div class="nav-group">
+                            {{ range $art := $section.Articles }}
+                            <a href="{{ $art.Path }}" class="nav-item">{{ $art.Title }}</a>
+                            {{ end }} 
+                            
+                            {{ range $subName, $subSection := $section.Sub }}
+                            <div class="nav-sub-heading">{{ $subSection.Name }}</div>
+                            {{ range $art := $subSection.Articles }}
+                            <a href="{{ $art.Path }}" class="nav-item sub-item">{{ $art.Title }}</a>
+                            {{ end }} 
+                            {{ end }}
+                        </div>
+                    </div>
                     {{ end }}
                 </div>
-                {{ end }}
+
+                <div id="search-results" style="display: none; padding: 0 1rem;">
+                    <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin: 1rem 0 0.5rem; letter-spacing: 0.05em;">Search Results</div>
+                    <div id="search-results-items" style="display: flex; flex-direction: column; gap: 0.25rem;"></div>
+                </div>
             </nav>
 
             <main id="main">
@@ -73,12 +92,12 @@
 
         <style>
             .hover-container:hover {
-                background: #dbd7d7 !important; /* Slightly darkens background on hover */
+                background: #dbd7d7 !important; 
             }
             .hover-container:hover .reason-text {
-                max-height: 100px !important; /* Expands open dynamically */
-                opacity: 1 !important;        /* Fades in content text */
-                margin-top: 0.25rem;          /* Adds breathing room spacing */
+                max-height: 100px !important; 
+                opacity: 1 !important;        
+                margin-top: 0.25rem;          
             }
         </style>
     {{ end }}
@@ -92,5 +111,63 @@
                 </div>
             </main>
         </div>
+        <script>
+            let searchIndexCache = null;
+
+            async function loadSearchIndex() {
+                if (searchIndexCache) return searchIndexCache;
+                try {
+                    const response = await fetch('/-/search-index.json');
+                    if (response.ok) {
+                        searchIndexCache = await response.json();
+                        return searchIndexCache;
+                    }
+                } catch (err) {
+                    console.error("Failed to populate search index", err);
+                }
+                return [];
+            }
+
+            async function filterArticles() {
+                const query = document.getElementById('search-input').value.toLowerCase().trim();
+                const normalLinks = document.getElementById('sidebar-links');
+                const searchView = document.getElementById('search-results');
+                const resultsContainer = document.getElementById('search-results-items');
+
+                if (query === "") {
+                    searchView.style.display = "none";
+                    normalLinks.style.display = "block";
+                    return;
+                }
+
+                const index = await loadSearchIndex();
+                const matches = index.filter(item => 
+                    item.title.toLowerCase().includes(query) || 
+                    item.path.toLowerCase().includes(query)
+                );
+
+                normalLinks.style.display = "none";
+                searchView.style.display = "block";
+                resultsContainer.innerHTML = "";
+
+                if (matches.length === 0) {
+                    resultsContainer.innerHTML = '<div style="color: #666; font-size: 0.9rem; padding: 0.5rem 0;">No matching pages found</div>';
+                    return;
+                }
+
+                matches.forEach(match => {
+                    const link = document.createElement('a');
+                    link.href = match.path;
+                    link.className = 'nav-item';
+                    link.style.display = 'block';
+                    link.textContent = match.title;
+                    resultsContainer.appendChild(link);
+                });
+            }
+
+            document.getElementById('search-input').addEventListener('focus', loadSearchIndex);
+        </script>
+    </body>
+</html>
     </body>
 </html>

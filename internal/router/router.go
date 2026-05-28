@@ -46,6 +46,7 @@ func New(s *store.Store, cfg *config.Config, cfgPath string) http.Handler {
 	mux.HandleFunc("/", h.serve)
 	mux.HandleFunc("/-/health", h.health)
 	mux.HandleFunc("/-/manifest", h.manifest)
+	mux.HandleFunc("/-/search-index.json", h.searchIndex) // <--- ADD THIS LINE
 	mux.HandleFunc("/-/source/", h.source)
 	mux.HandleFunc("/-/download/", h.download)
 
