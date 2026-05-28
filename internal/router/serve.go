@@ -16,16 +16,17 @@ type crumb struct {
 }
 
 type pageData struct {
-	Site     string
-	Nav      map[string]*store.Section
-	Body     template.HTML
-	Title    string
-	Path     string
-	TopCat   string
-	Crumb    []crumb
-	Verified bool
-	Author   string
-	Hash     string
+	Site              string
+	Nav               map[string]*store.Section
+	Body              template.HTML
+	Title             string
+	Path              string
+	TopCat            string
+	Crumb             []crumb
+	Verified          bool
+	Author            string
+	Hash              string
+	VerificationError string
 }
 
 func capitalize(s string) string {
@@ -79,6 +80,7 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 		d.Verified = art.Verified
 		d.Author = art.Author
 		d.Hash = art.Hash
+		d.VerificationError = art.VerificationError
 	}
 
 	if err := h.tmpl.ExecuteTemplate(w, "base.html", d); err != nil {

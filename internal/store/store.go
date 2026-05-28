@@ -17,12 +17,13 @@ import (
 )
 
 type Article struct {
-	Path     string
-	Title    string
-	Body     template.HTML
-	Hash     string // SHA-256 Hash for UI Display
-	Verified bool   // Ed25519 Verification Status
-	Author   string // Name of the verified signer
+	Path              string
+	Title             string
+	Body              template.HTML
+	Hash              string
+	Verified          bool
+	Author            string
+	VerificationError string
 }
 
 type Section struct {
@@ -158,6 +159,12 @@ func (s *Store) Reload() error {
 			return nil
 		}
 
+		relativePath, err := filepath.Rel(s.dataDir, path)
+		if err != nil {
+			return nil
+		}
+		relativePath = filepath.ToSlash(relativePath)
+
 		// 3. Calculate SHA-256
 		hashBytes := sha256.Sum256(content)
 		fileHash := hex.EncodeToString(hashBytes[:])
@@ -170,66 +177,53 @@ func (s *Store) Reload() error {
 		// 4. Ed25519 Cryptographic Verification
 		isVerified := false
 		authorName := "Unverified / Unknown Origin"
+		verifyErr := "File signature not found in manifest"
 
-		// Get relative path in the format used in manifest
-		rel, _ := filepath.Rel(s.dataDir, path)
-		relativePath := strings.TrimPrefix(filepath.ToSlash(rel), "/")
-		log.Printf("[DEBUG] Checking file: %s -> relativePath=%s", path, relativePath)
-
-		// Try to find manifest entry by filepath
 		if entry, exists := allSignatures[relativePath]; exists {
-			// Use file_hash if available, otherwise hash
 			entryHash := entry.FileHash
 			if entryHash == "" {
 				entryHash = entry.Hash
 			}
 
-			// Does the hash match?
 			if entryHash == fileHash {
-				// Does the signature belong to a trusted public key?
 				if trustedAuthor, isTrusted := trustedKeys[strings.ToLower(entry.PublicKey)]; isTrusted {
 					pubBytes, err1 := hex.DecodeString(entry.PublicKey)
 					sigBytes, err2 := hex.DecodeString(entry.Signature)
 
 					if err1 == nil && err2 == nil && len(pubBytes) == ed25519.PublicKeySize {
-						// Check 1: Did the plugin sign the raw Markdown content?
-						if ed25519.Verify(pubBytes, content, sigBytes) {
+						if ed25519.Verify(pubBytes, content, sigBytes) ||
+							ed25519.Verify(pubBytes, []byte(fileHash), sigBytes) ||
+							ed25519.Verify(pubBytes, hashBytes[:], sigBytes) {
 							isVerified = true
 							authorName = trustedAuthor
-							// Check 2: Did the plugin sign the Hex string of the SHA256 hash? (Very common)
-						} else if ed25519.Verify(pubBytes, []byte(fileHash), sigBytes) {
-							isVerified = true
-							authorName = trustedAuthor
-							// Check 3: Did the plugin sign the raw SHA256 bytes?
-						} else if ed25519.Verify(pubBytes, hashBytes[:], sigBytes) {
-							isVerified = true
-							authorName = trustedAuthor
+							verifyErr = "" // Clear error on success
 						} else {
-							log.Printf("[DEBUG] Signature verification failed for %s (Tried Content, Hex Hash, and Byte Hash)", relativePath)
+							verifyErr = "Invalid Signature: Cryptographic verification failed"
 						}
+					} else {
+						verifyErr = "Malformed Signature or Public Key data"
 					}
 				} else {
-					log.Printf("[DEBUG] Public key not trusted for %s: %s", relativePath, entry.PublicKey)
+					verifyErr = "Untrusted Key: The public key is not mapped in contributors.json"
 				}
 			} else {
-				log.Printf("[DEBUG] Hash mismatch for %s: stored=%s, actual=%s", relativePath, entryHash, fileHash)
+				verifyErr = "Hash Mismatch: File content was modified after signing"
 			}
 		}
 
-		// 5. Build Article Structure
-		parts := strings.Split(filepath.ToSlash(rel), "/")
-
-		title := strings.TrimSuffix(parts[len(parts)-1], ".md")
-		title = strings.ReplaceAll(title, "-", " ")
-		title = strings.Title(title)
+		// Build Article Structure
+		cleanPath := strings.TrimSuffix(relativePath, ".md")
+		parts := strings.Split(cleanPath, "/")
+		title := parts[len(parts)-1] // Default to the filename as the title
 
 		art := &Article{
-			Path:     "/" + filepath.ToSlash(rel),
-			Title:    title,
-			Body:     template.HTML(res.HTMLContent),
-			Hash:     fileHash,
-			Verified: isVerified,
-			Author:   authorName,
+			Path:              "/" + filepath.ToSlash(cleanPath),
+			Title:             title,
+			Body:              template.HTML(res.HTMLContent),
+			Hash:              fileHash,
+			Verified:          isVerified,
+			Author:            authorName,
+			VerificationError: verifyErr, // <--- PASS THE ERROR HERE
 		}
 
 		// Tree Building

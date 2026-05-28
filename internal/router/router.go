@@ -1,6 +1,7 @@
 package router
 
 import (
+	"crypto/subtle"
 	"embed"
 	"html/template"
 	"io/fs"
@@ -22,8 +23,6 @@ type handler struct {
 }
 
 func New(s *store.Store, cfg *config.Config, cfgPath string) http.Handler {
-	// Clean global parsing: automatically maps templates
-	//
 	tmpl := template.Must(template.ParseFS(files, "templates/base.html"))
 	adminTmpl := template.Must(template.ParseFS(files, "templates/admin.html"))
 
@@ -43,25 +42,49 @@ func New(s *store.Store, cfg *config.Config, cfgPath string) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
+	// Public Routes
 	mux.HandleFunc("/", h.serve)
-	mux.HandleFunc("/-/reload", h.reload)
-	mux.HandleFunc("/-/import", h.importRemote)
 	mux.HandleFunc("/-/health", h.health)
 	mux.HandleFunc("/-/manifest", h.manifest)
 	mux.HandleFunc("/-/source/", h.source)
 	mux.HandleFunc("/-/download/", h.download)
 
-	// Secure Admin UI & Endpoints
+	// The Admin UI (Unprotected so the login screen renders)
 	mux.HandleFunc("/-/admin", h.adminUI)
-	mux.HandleFunc("/-/admin/config", h.adminConfig)
-	mux.HandleFunc("/-/admin/remove", h.adminRemove)
+
+	// SECURE ROUTES: Wrapped in the adminOnly middleware
+	mux.HandleFunc("/-/reload", h.adminOnly(h.reload))
+	mux.HandleFunc("/-/import", h.adminOnly(h.importRemote))
+	mux.HandleFunc("/-/admin/config", h.adminOnly(h.adminConfig))
+	mux.HandleFunc("/-/admin/remove", h.adminOnly(h.adminRemove))
 
 	return mux
 }
 
+// adminOnly is the security middleware that protects endpoints from unauthorized access
+func (h *handler) adminOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("X-Admin-Token")
+
+		// 1. Check if token is empty
+		if token == "" || h.cfg.AdminToken == "" {
+			http.Error(w, "Unauthorized: Missing Token", http.StatusUnauthorized)
+			return
+		}
+
+		// 2. Use ConstantTimeCompare to prevent timing attacks
+		if subtle.ConstantTimeCompare([]byte(token), []byte(h.cfg.AdminToken)) != 1 {
+			http.Error(w, "Unauthorized: Invalid Token", http.StatusUnauthorized)
+			return
+		}
+
+		// 3. Token is valid, proceed to the requested function
+		next(w, r)
+	}
+}
+
 func (h *handler) adminUI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	// Explicitly call the specific template target name
 	if err := h.adminTmpl.ExecuteTemplate(w, "admin.html", nil); err != nil {
 		http.Error(w, "Admin template execution error: "+err.Error(), 500)
 	}

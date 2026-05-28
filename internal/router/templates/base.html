@@ -55,14 +55,14 @@
 
                 <div class="security-header">
                     {{ if .Verified }}
-                    <div class="badge verified">
-                        ✅ Verified Contributor: <strong>{{ .Author }}</strong>
-                    </div>
-                    {{ else }}
-                    <div class="badge unverified">
-                        ⚠️ Unverified / Unknown Origin
-                    </div>
-                    {{ end }}
+    <div class="badge verified" title="Cryptographically Verified">
+        ✅ Verified Contributor: {{ .Author }}
+    </div>
+{{ else if .VerificationError }}
+    <div class="badge unverified" title="{{ .VerificationError }}" style="cursor: help;">
+        ⚠️ Unverified (Hover for reason)
+    </div>
+{{ end }}
                 </div>
 
                 <div class="article-content">{{ .Body }}</div>
