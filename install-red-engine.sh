@@ -75,6 +75,19 @@ else
     exit 1
 fi
 
+# 6. Dependency Check & Build
+if ! command -v go &> /dev/null; then
+    echo "❌ Error: 'go' is not installed. Please install Go (1.21+)."
+    exit 1
+fi
+
+echo "[*] Ensuring dependencies are up to date..."
+go mod tidy
+
+echo "[*] Building local image and starting..."
+podman build --network=host -t red-engine-image .
+podman-compose up -d
+
 echo "[*] Starting RED Engine using container engine..."
 $COMPOSE_CMD
 

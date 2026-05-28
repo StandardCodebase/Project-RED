@@ -108,6 +108,22 @@ if ($ComposeCmd -eq "")
     Exit
 }
 
+# 6. Dependency Check
+if (-Not (Get-Command "go" -ErrorAction SilentlyContinue)) {
+    Write-Host "❌ Error: 'go' is not installed. Please install Go from https://go.dev/dl/" -ForegroundColor Red
+    Exit
+}
+
+Write-Host "[*] Ensuring dependencies are up to date..." -ForegroundColor Green
+& go mod tidy
+
+# 6. Build and Deploy
+Write-Host "[*] Building local image..." -ForegroundColor Green
+podman build --network=host -t red-engine-image .
+
+Write-Host "[*] Starting services..." -ForegroundColor Green
+podman-compose up -d
+
 Write-Host "[*] Starting RED Engine..."
 & $ComposeCmd $ComposeArgs
 
