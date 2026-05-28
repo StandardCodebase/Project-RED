@@ -2,6 +2,7 @@
 
 config.json
 red-engine
+red
 
 data/
 test-integrity.sh
