@@ -11,7 +11,7 @@
 </head>
 
 <body>
-  <div id="wrap">
+  <div id="wrap" class="dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100">
     <nav id="sidebar">
       {{ range $topName, $section := .Nav }}
       <div class="nav-heading">{{ $section.Name }}</div>
@@ -57,7 +57,7 @@
       <!-- Article Content -->
       <div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div
-          class="prose prose-neutral dark:prose-invert max-w-none overflow-hidden rounded-xl border border-neutral-200 bg-white p-6 text-neutral-900 shadow-sm dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100">
+          class="prose prose-neutral dark:prose-invert max-w-none overflow-hidden rounded-xl border border-neutral-200 bg-white p-6 text-neutral-900 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100">
           {{ .Body }}
         </div>
       </div>
