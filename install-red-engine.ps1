@@ -1,118 +1,57 @@
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "🚀 Installing RED Engine..." -ForegroundColor Cyan
+Write-Host "🚀 Installing RED Engine (Production Mode)..." -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# 1. Check if we are inside the repository; if not, clone it.
-if (-Not (Test-Path "docker-compose.yml"))
+# Check for Administrator privileges
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
 {
-    Write-Host "[*] Repository not detected in current directory."
-
-    if (-Not (Get-Command "git" -ErrorAction SilentlyContinue))
-    {
-        Write-Host "❌ Error: 'git' is not installed. Please install Git for Windows to continue." -ForegroundColor Red
-        Exit
-    }
-
-    Write-Host "[*] Cloning RED Engine repository..."
-    git clone https://github.com/RED-Collective/red-engine.git
-
-    if ($LASTEXITCODE -ne 0)
-    {
-        Write-Host "❌ Error: Failed to clone repository." -ForegroundColor Red
-        Exit
-    }
-
-    Write-Host "[*] Navigating into red-engine directory..."
-    Set-Location "red-engine"
-} else
-{
-    Write-Host "[*] Running from inside existing repository."
-}
-
-# 2. Create data directory safely as the standard user
-if (-Not (Test-Path ".\data"))
-{
-    Write-Host "[*] Creating .\data directory..."
-    New-Item -ItemType Directory -Path ".\data" | Out-Null
-} else
-{
-    Write-Host "[*] .\data directory already exists."
-}
-
-# 3. Check for or create config.json with a secure token
-if (-Not (Test-Path "config.json"))
-{
-    Write-Host "[*] Generating default config.json..."
-
-    # Generate a cryptographically secure 32-character hexadecimal token
-    $Bytes = New-Object Byte[] 16
-    [Security.Cryptography.RNGCryptoServiceProvider]::Create().GetBytes($Bytes)
-    $NewToken = [BitConverter]::ToString($Bytes) -replace '-'
-
-    $DefaultConfig = @{
-        addr = ":8080"
-        siteName = "RED Engine"
-        dataDir = "/app/data"
-        adminToken = $NewToken
-        startupSync = @()
-    }
-    $DefaultConfig | ConvertTo-Json -Depth 10 | Set-Content "config.json"
-
-    Write-Host "[*] Generated secure Admin Token: $NewToken" -ForegroundColor Green
-    Write-Host "⚠️  PLEASE SAVE THIS TOKEN! You will need it to log in to the admin panel." -ForegroundColor Yellow
-} else
-{
-    Write-Host "[*] config.json already exists. Skipping default generation."
-}
-
-# 4. Check for or create contributors.json
-if (-Not (Test-Path "contributors.json"))
-{
-    Write-Host "[*] Generating default contributors.json..."
-    "[]" | Set-Content "contributors.json"
-} else
-{
-    Write-Host "[*] contributors.json already exists."
-}
-
-# 5. Detect the container engine
-$ComposeCmd = ""
-$ComposeArgs = @("up", "--build", "-d")
-
-if (Get-Command "podman-compose" -ErrorAction SilentlyContinue)
-{
-    $ComposeCmd = "podman-compose"
-} elseif (Get-Command "docker-compose" -ErrorAction SilentlyContinue)
-{
-    $ComposeCmd = "docker-compose"
-} elseif (Get-Command "docker" -ErrorAction SilentlyContinue)
-{
-    # Check if modern 'docker compose' (V2) is available
-    try
-    {
-        $null = Invoke-Expression "docker compose version 2>&1"
-        if ($LASTEXITCODE -eq 0)
-        {
-            $ComposeCmd = "docker"
-            $ComposeArgs = @("compose", "up", "--build", "-d")
-        }
-    } catch
-    {
-    }
-}
-
-if ($ComposeCmd -eq "")
-{
-    Write-Host "❌ Error: Neither podman-compose nor docker compose found on this system." -ForegroundColor Red
-    Write-Host "Please install Podman or Docker Desktop to continue." -ForegroundColor Red
+    Write-Host "⚠️  Administrator privileges are required to bind network ports." -ForegroundColor Yellow
+    Write-Host "Re-launching as Administrator..." -ForegroundColor Yellow
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     Exit
 }
 
-Write-Host "[*] Starting RED Engine..."
-& $ComposeCmd $ComposeArgs
+# 1. Repository Check
+if (-Not (Test-Path "docker-compose.yml"))
+{
+    git clone https://github.com/RED-Collective/red-engine.git
+    Set-Location "red-engine"
+}
 
+# 2. Setup Directories
+if (-Not (Test-Path ".\data"))
+{ New-Item -ItemType Directory -Path ".\data" | Out-Null 
+}
+
+# 3. Handle config.json
+if (-Not (Test-Path "config.json"))
+{
+    $Bytes = New-Object Byte[] 16
+    [Security.Cryptography.RNGCryptoServiceProvider]::Create().GetBytes($Bytes)
+    $NewToken = [BitConverter]::ToString($Bytes) -replace '-'
+    $DefaultConfig = @{ addr = ":8080"; siteName = "RED Engine"; dataDir = "/app/data"; adminToken = $NewToken; startupSync = @() }
+    $DefaultConfig | ConvertTo-Json -Depth 10 | Set-Content "config.json"
+}
+
+# 4. Handle contributors.json
+if (-Not (Test-Path "contributors.json"))
+{ "[]" | Set-Content "contributors.json" 
+}
+
+# 5. Build and Deploy
+Write-Host "[*] Building local image..." -ForegroundColor Green
+podman build --network=host -t red-engine-image .
+
+Write-Host "[*] Starting services..." -ForegroundColor Green
+podman-compose up -d
+
+# 6. Final Status
+$Config = Get-Content "config.json" | ConvertFrom-Json
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "✅ Installation Complete!" -ForegroundColor Green
-Write-Host "🌐 Your node is running at: http://localhost"
+Write-Host "🌐 Node running at: http://localhost"
 Write-Host "⚙️  Admin Panel: http://localhost/-/admin"
+Write-Host "🔑 YOUR ADMIN TOKEN: $($Config.adminToken)" -ForegroundColor Yellow
+Write-Host "⚠️  PLEASE SAVE THIS TOKEN!" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Cyan

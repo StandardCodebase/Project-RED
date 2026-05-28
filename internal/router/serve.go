@@ -68,12 +68,22 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request) {
 		d.Body = template.HTML(sectionHTML(sec))
 
 	default:
-		art := h.store.Get(path)
+		// Clean the incoming URL
+		cleanPath := strings.TrimSuffix(path, ".md")
+		art := h.store.Get(cleanPath)
+
+		// Fallback lookup if exact match failed
+		if art == nil {
+			art = h.store.Get(path)
+		}
+
 		if art == nil {
 			http.NotFound(w, r)
 			return
 		}
+
 		d.Title = capitalize(parts[len(parts)-1])
+		d.Title = strings.TrimSuffix(d.Title, ".md") // Remove .md from the UI title
 		d.Crumb = buildCrumbs(parts)
 		d.Body = art.Body
 		d.Verified = art.Verified
