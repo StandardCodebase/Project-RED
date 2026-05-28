@@ -3,7 +3,6 @@ echo "========================================"
 echo "🚀 Installing RED Engine..."
 echo "========================================"
 
-# 1. Check if we are inside the repository; if not, clone it.
 if [ ! -f "docker-compose.yml" ]; then
     echo "[*] Repository not detected in current directory."
 
@@ -25,7 +24,6 @@ else
     echo "[*] Running from inside existing repository."
 fi
 
-# 2. Create data directory safely as the standard user (NO SUDO)
 if [ ! -d "./data" ]; then
     echo "[*] Creating ./data directory..."
     mkdir -p ./data
@@ -33,10 +31,8 @@ else
     echo "[*] ./data directory already exists."
 fi
 
-# 3. Check for or create config.json with a secure token
 if [ ! -f "config.json" ]; then
     echo "[*] Generating default config.json..."
-    # Generate a secure 24-character token
     NEW_TOKEN=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 24 | head -n 1)
 
     cat <<EOF > config.json
@@ -54,7 +50,6 @@ else
     echo "[*] config.json already exists. Skipping default generation."
 fi
 
-# 4. Check for or create contributors.json
 if [ ! -f "contributors.json" ]; then
     echo "[*] Generating default contributors.json..."
     echo "[]" > contributors.json
@@ -62,7 +57,6 @@ else
     echo "[*] contributors.json already exists."
 fi
 
-# 5. Detect the container engine
 if command -v podman-compose &> /dev/null; then
     COMPOSE_CMD="podman-compose up --build -d"
 elif command -v docker-compose &> /dev/null; then
@@ -75,24 +69,28 @@ else
     exit 1
 fi
 
-# 6. Dependency Check & Build
-if ! command -v go &> /dev/null; then
-    echo "❌ Error: 'go' is not installed. Please install Go (1.21+)."
-    exit 1
-fi
-
-echo "[*] Ensuring dependencies are up to date..."
-go mod tidy
-
-echo "[*] Building local image and starting..."
-podman build --network=host -t red-engine-image .
-podman-compose up -d
-
 echo "[*] Starting RED Engine using container engine..."
 $COMPOSE_CMD
 
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Failed to start containers."
+    exit 1
+fi
+
+CONFIG_PORT=$(grep '"addr"' config.json | sed -E 's/.*:([0-9]+).*/\1/')
+
+if [ -z "$CONFIG_PORT" ]; then
+    CONFIG_PORT="8080"
+fi
+
+HOST_IP="localhost"
+if command -v hostname &> /dev/null; then
+    HOST_IP=$(hostname -I | awk '{print $1}')
+    [ -z "$HOST_IP" ] && HOST_IP="localhost"
+fi
+
 echo "========================================"
 echo "✅ Installation Complete!"
-echo "🌐 Your node is running at: http://localhost"
-echo "⚙️  Admin Panel: http://localhost/-/admin"
+echo "🌐 Your node is running at: http://${HOST_IP}:${CONFIG_PORT}"
+echo "⚙️  Admin Panel: http://${HOST_IP}:${CONFIG_PORT}/-/admin"
 echo "========================================"
