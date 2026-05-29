@@ -31,7 +31,7 @@
     <!-- Make the same margin for the left the size of the sidebar, (see the w-32, or whatever it is rn) -->
     <main id="main" class="ml-48 mb-0 min-h-screen flex flex-col">
       {{ if .Crumb }}
-      <div class="breadcrumb flex flex-row gap-2 align-middle justify-left m-8">
+      <div class="breadcrumb flex flex-row gap-2 align-middle justify-left mx-8 mt-4">
         <a class="underline font-light my-auto" href="/">Home</a>
         {{ range $i, $c := .Crumb }}
         <span class="sep pt-1">
