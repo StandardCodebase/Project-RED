@@ -89,7 +89,7 @@
 
       <div class="hash-footer m-8 bg-neutral-300 dark:bg-neutral-700 rounded-md px-6 p-4">
         <div class="m-auto flex flex-row gap-1">
-          <div class="flex flex-row gap-2">
+          <div class="flex flex-row gap-2 my-auto">
             <svg xmlns="http://www.w3.org/2000/svg" width="2em" height="2em" viewBox="0 0 512 512">
               <path d="M0 0h512v512H0z" fill="none" />
               <path fill="#B1B4B5"
@@ -99,10 +99,10 @@
               <path fill="#FFD469"
                 d="M109.311 456.841h-2.525c-7.953 0-14.4-6.447-14.4-14.4V279.309c0-7.953 6.447-14.4 14.4-14.4h2.525c7.953 0 14.4 6.447 14.4 14.4v163.132c0 7.953-6.447 14.4-14.4 14.4" />
             </svg>
-            <span class="hash-label">SHA-256 Checksum:</span>
+            <span class="hash-label my-auto">SHA-256 Checksum:</span>
           </div>
           {{if .Hash}}
-          <code class="hash-string" title="File integrity hash">{{ .Hash }}</code>
+          <code class="hash-string my-auto" title="File integrity hash">{{ .Hash }}</code>
           {{end}}
         </div>
       </div>
