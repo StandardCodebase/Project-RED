@@ -13,10 +13,20 @@
 <body class="dark:bg-neutral-900 dark:text-neutral-100 min-h-screen text-neutral-950 mb-0">
   <div id="wrap mb-0">
     <div id="sidebar"
-      class="bg-red-300 dark:bg-neutral-950 border-r-4 border-red-950 fixed top-0 left-0 z-40 w-48 h-full transition-transform -translate-x-full sm:translate-x-0">
+      class="fixed bg-red-300 dark:bg-neutral-950 border-r-4 border-red-950 top-0 left-0 z-40 w-48 h-full transition-all duration-200 ease-in-out">
+      <button id="sidebar-button" class="absolute top-2 right-2 transition-all duration-400 ease-in-out"
+        onclick="toggleRedSidebar()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="2.5em" height="2.5em" viewBox="0 0 24 24">
+          <path d="M0 0h24v24H0z" fill="none" />
+          <path fill="currentColor"
+            d="M18 3a3 3 0 0 1 2.995 2.824L21 6v12a3 3 0 0 1-2.824 2.995L18 21H6a3 3 0 0 1-2.995-2.824L3 18V6a3 3 0 0 1 2.824-2.995L6 3zm0 2H9v14h9a1 1 0 0 0 .993-.883L19 18V6a1 1 0 0 0-.883-.993zm-2.293 4.293a1 1 0 0 1 .083 1.32l-.083.094L14.415 12l1.292 1.293a1 1 0 0 1 .083 1.32l-.083.094a1 1 0 0 1-1.32.083l-.094-.083l-2-2a1 1 0 0 1-.083-1.32l.083-.094l2-2a1 1 0 0 1 1.414 0" />
+        </svg>
+      </button>
+      <div class="mt-8"></div>
+      <!-- ^ extra space div and I'm lazy -->
       {{ range $topName, $section := .Nav }}
-      <div class="nav-heading m-2">{{ $section.Name }}</div>
-      <div class="nav-group flex-row gap-2 ml-4">
+      <div class="nav-heading m-2 sidebar-text">{{ $section.Name }}</div>
+      <div class="nav-group flex-row gap-2 ml-4 sidebar-text">
         {{ range $art := $section.Articles }}
         <a href="{{ $art.Path }}" class="nav-item">{{ $art.Title }}</a>
         {{ end }} {{ range $subName, $subSection := $section.Sub }}
@@ -124,7 +134,18 @@
     // Make the sidebar collapsable
 
     function toggleRedSidebar() {
-      alert('hi')
+      const sidebar = document.getElementById("sidebar");
+      const text = document.querySelectorAll(".sidebar-text");
+      const sidebar_button = document.getElementById('sidebar-button')
+
+      sidebar.classList.toggle("w-48");
+      sidebar.classList.toggle("w-16");
+
+      sidebar_button.classList.toggle("rotate-180")
+
+      text.forEach((el) => {
+        el.classList.toggle("hidden");
+      });
     }
   </script>
 </body>
