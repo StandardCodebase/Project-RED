@@ -39,7 +39,7 @@
     </div>
 
     <!-- Make the same margin for the left the size of the sidebar, (see the w-32, or whatever it is rn) -->
-    <main id="main" class="ml-48 mb-0 min-h-screen flex flex-col">
+    <main id="main_content" class="ml-48 mb-0 min-h-screen flex flex-col transition-all duration-200 ease-in-out">
       {{ if .Crumb }}
       <div class="breadcrumb flex flex-row gap-2 align-middle justify-left mx-8 mt-4">
         <a class="underline font-light my-auto" href="/">Home</a>
@@ -137,9 +137,13 @@
       const sidebar = document.getElementById("sidebar");
       const text = document.querySelectorAll(".sidebar-text");
       const sidebar_button = document.getElementById('sidebar-button')
+      const main_content = document.getElementById('main_content')
 
       sidebar.classList.toggle("w-48");
       sidebar.classList.toggle("w-16");
+
+      main_content.classList.toggle("ml-48")
+      main_content.classList.toggle("ml-16")  // Notice how this is the same number as the w-16 earlier - this is the bar width
 
       sidebar_button.classList.toggle("rotate-180")
 
