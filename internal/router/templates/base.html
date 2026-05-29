@@ -10,10 +10,10 @@
   <!-- Optional: add a favicon or additional meta tags -->
 </head>
 
-<body class="dark:bg-neutral-950 dark:text-neutral-100 min-h-screen">
-  <div id="wrap">
+<body class="dark:bg-neutral-900 dark:text-neutral-100 min-h-screen text-neutral-950 mb-0">
+  <div id="wrap mb-0">
     <div id="sidebar"
-      class="dark:bg-black fixed top-0 left-0 z-40 w-48 h-full transition-transform -translate-x-full sm:translate-x-0">
+      class="bg-red-300 dark:bg-neutral-950 border-r-4 border-red-950 fixed top-0 left-0 z-40 w-48 h-full transition-transform -translate-x-full sm:translate-x-0">
       {{ range $topName, $section := .Nav }}
       <div class="nav-heading m-2">{{ $section.Name }}</div>
       <div class="nav-group flex-row gap-2 ml-4">
@@ -29,7 +29,7 @@
     </div>
 
     <!-- Make the same margin for the left the size of the sidebar, (see the w-32, or whatever it is rn) -->
-    <main id="main" class="ml-48">
+    <main id="main" class="ml-48 mb-0">
       {{ if .Crumb }}
       <div class="breadcrumb flex flex-row gap-2 align-middle justify-left m-8">
         <a class="underline font-light my-auto" href="/">Home</a>
@@ -81,17 +81,40 @@
       <!-- Article Content -->
       <div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div
-          class="prose prose-neutral dark:prose-invert max-w-none overflow-hidden rounded-xl border border-neutral-200 bg-white p-6 text-neutral-900 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100">
+          class="prose prose-neutral dark:prose-invert max-w-none overflow-hidden rounded-xl border border-neutral-200 bg-white p-6 text-neutral-900 shadow-sm dark:border-neutral-800 dark:bg-neutral-800 dark:text-neutral-100">
           {{ .Body }}
         </div>
       </div>
 
 
-      <div class="hash-footer m-8">
-        <span class="hash-label">🔐 SHA-256 Checksum:</span>
-        {{if .Hash}}
-        <code class="hash-string" title="File integrity hash">{{ .Hash }}</code>
-        {{end}}
+      <div class="hash-footer m-8 bg-neutral-300 dark:bg-neutral-700 rounded-md px-6 p-4">
+        <div class="m-auto flex flex-row gap-1">
+          <div class="flex flex-row gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="2em" height="2em" viewBox="0 0 512 512">
+              <path d="M0 0h512v512H0z" fill="none" />
+              <path fill="#B1B4B5"
+                d="M376.749 349.097c-13.531 0-24.5-10.969-24.5-24.5V181.932c0-48.083-39.119-87.203-87.203-87.203c-48.083 0-87.203 39.119-87.203 87.203v82.977c0 13.531-10.969 24.5-24.5 24.5s-24.5-10.969-24.5-24.5v-82.977c0-75.103 61.1-136.203 136.203-136.203s136.203 61.1 136.203 136.203v142.665c0 13.531-10.969 24.5-24.5 24.5" />
+              <path fill="#FFB636"
+                d="M414.115 497.459H115.977c-27.835 0-50.4-22.565-50.4-50.4V274.691c0-27.835 22.565-50.4 50.4-50.4h298.138c27.835 0 50.4 22.565 50.4 50.4v172.367c0 27.836-22.565 50.401-50.4 50.401" />
+              <path fill="#FFD469"
+                d="M109.311 456.841h-2.525c-7.953 0-14.4-6.447-14.4-14.4V279.309c0-7.953 6.447-14.4 14.4-14.4h2.525c7.953 0 14.4 6.447 14.4 14.4v163.132c0 7.953-6.447 14.4-14.4 14.4" />
+            </svg>
+            <span class="hash-label">SHA-256 Checksum:</span>
+          </div>
+          {{if .Hash}}
+          <code class="hash-string" title="File integrity hash">{{ .Hash }}</code>
+          {{end}}
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="bg-red-400 h-auto dark:bg-red-900 dark:text-red-300">
+        <div class="p-4">
+          <p>This open source project was developed by people like you! If you are interested in contributing, please
+            consider <a target="_blank" href="https://github.com/RED-Collective/red-engine/blob/main/README.md">hosting
+              a node</a> or collaborating with us on <a target="_blank" class="text-red-100 underline"
+              href="https://github.com/RED-Collective/red-engine">GitHub.</a></p>
+        </div>
       </div>
     </main>
   </div>
