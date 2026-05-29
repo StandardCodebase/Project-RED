@@ -44,9 +44,13 @@ if ($Choice -match "^[yY]")
     $Config.adminToken = New-SecureToken
     $Config | ConvertTo-Json -Depth 10 | Set-Content $ConfigFile
 
-    Write-Host "`n✅ Token updated successfully!" -ForegroundColor Green
-    Write-Host "Your new token is: $($Config.adminToken)" -ForegroundColor Cyan
-    Write-Host "⚠️  Restart your node: podman-compose restart red_engine" -ForegroundColor Yellow
+    # Update the object and save it back to disk
+    $Config.adminToken = $NewToken
+    $Config | ConvertTo-Json -Depth 10 | Set-Content $ConfigFile
+
+    Write-Host "✅ Token updated successfully!" -ForegroundColor Green
+    Write-Host "Your new token is: $NewToken" -ForegroundColor Cyan
+    Write-Host "⚠️  Make sure to restart your node: podman-compose restart red_engine" -ForegroundColor Yellow
 } else
 {
     Write-Host "Operation cancelled. Token unchanged."

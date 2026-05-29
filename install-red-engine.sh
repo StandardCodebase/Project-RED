@@ -3,26 +3,21 @@ echo "========================================"
 echo "🚀 Installing RED Engine (Production Mode)..."
 echo "========================================"
 
-# Check for root/sudo privileges to bind ports 80/443
-if [[ $EUID -ne 0 ]]; then
-   echo "⚠️  Sudo privileges are required to bind ports 80 and 443."
-   echo "Please enter your password when prompted."
-   sudo "$0" "$@"
-   exit $?
-fi
-
-# 1. Repository Check
 if [ ! -f "docker-compose.yml" ]; then
     echo "[*] Cloning RED Engine repository..."
     git clone https://github.com/RED-Collective/red-engine.git
     cd red-engine || exit 1
 fi
 
-# 2. Setup Directories
-mkdir -p ./data
+if [ ! -d "./data" ]; then
+    echo "[*] Creating ./data directory..."
+    mkdir -p ./data
+else
+    echo "[*] ./data directory already exists."
+fi
 
-# 3. Handle config.json
 if [ ! -f "config.json" ]; then
+    echo "[*] Generating default config.json..."
     NEW_TOKEN=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 24 | head -n 1)
     cat <<EOF > config.json
 {
@@ -36,24 +31,30 @@ EOF
     echo "[*] Generated Admin Token: $NEW_TOKEN"
 fi
 
-# 4. Handle contributors.json
 if [ ! -f "contributors.json" ]; then
     echo "[]" > contributors.json
+else
+    echo "[*] contributors.json already exists."
 fi
 
-# 5. Build and Deploy
-echo "[*] Building local image..."
-podman build --network=host -t red-engine-image .
+# 5. Detect the container engine
+if command -v podman-compose &> /dev/null; then
+    COMPOSE_CMD="podman-compose up --build -d"
+elif command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose up --build -d"
+elif command -v docker &> /dev/null && docker compose version &> /dev/null; then
+    COMPOSE_CMD="docker compose up --build -d"
+else
+    echo "❌ Error: Neither podman-compose nor docker compose found on this system."
+    echo "Please install Podman or Docker to continue."
+    exit 1
+fi
 
-echo "[*] Starting services..."
-podman-compose up -d
+echo "[*] Starting RED Engine using container engine..."
+$COMPOSE_CMD
 
-# 6. Final Status
-TOKEN=$(grep -oP '"adminToken": "\K[^"]+' config.json)
 echo "========================================"
 echo "✅ Installation Complete!"
-echo "🌐 Node running at: http://localhost"
-echo "⚙️  Admin Panel: http://localhost/-/admin"
-echo "🔑 YOUR ADMIN TOKEN: $TOKEN"
-echo "⚠️  PLEASE SAVE THIS TOKEN!"
+echo "🌐 Your node is running at: http://${HOST_IP}:${CONFIG_PORT}"
+echo "⚙️  Admin Panel: http://${HOST_IP}:${CONFIG_PORT}/-/admin"
 echo "========================================"

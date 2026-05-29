@@ -2,56 +2,112 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "🚀 Installing RED Engine (Production Mode)..." -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# Check for Administrator privileges
-$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
-{
-    Write-Host "⚠️  Administrator privileges are required to bind network ports." -ForegroundColor Yellow
-    Write-Host "Re-launching as Administrator..." -ForegroundColor Yellow
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+if (-Not (Test-Path "docker-compose.yml")) {
+    Write-Host "[*] Repository not detected in current directory."
+
+    if (-Not (Get-Command "git" -ErrorAction SilentlyContinue)) {
+        Write-Host "❌ Error: 'git' is not installed. Please install Git for Windows to continue." -ForegroundColor Red
+        Exit
+    }
+
+    Write-Host "[*] Cloning RED Engine repository..."
+    git clone https://github.com/RED-Collective/red-engine.git
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Error: Failed to clone repository." -ForegroundColor Red
+        Exit
+    }
+
+    Write-Host "[*] Navigating into red-engine directory..."
+    Set-Location "red-engine"
+} else {
+    Write-Host "[*] Running from inside existing repository."
+}
+
+if (-Not (Test-Path ".\data")) {
+    Write-Host "[*] Creating .\data directory..."
+    New-Item -ItemType Directory -Path ".\data" | Out-Null
+} else {
+    Write-Host "[*] .\data directory already exists."
+}
+
+if (-Not (Test-Path "config.json")) {
+    Write-Host "[*] Generating default config.json..."
+
+    $Bytes = New-Object Byte[] 16
+    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($Bytes)
+    $NewToken = [BitConverter]::ToString($Bytes) -replace '-'
+
+    $DefaultConfig = @{
+        addr = ":8080"
+        siteName = "RED Engine"
+        dataDir = "/app/data"
+        adminToken = $NewToken
+        startupSync = @()
+    }
+    $DefaultConfig | ConvertTo-Json -Depth 10 | Set-Content "config.json"
+
+    Write-Host "[*] Generated secure Admin Token: $NewToken" -ForegroundColor Green
+    Write-Host "⚠️  PLEASE SAVE THIS TOKEN! You will need it to log in to the admin panel." -ForegroundColor Yellow
+} else {
+    Write-Host "[*] config.json already exists. Skipping default generation."
+}
+
+if (-Not (Test-Path "contributors.json")) {
+    Write-Host "[*] Generating default contributors.json..."
+    "[]" | Set-Content "contributors.json"
+} else {
+    Write-Host "[*] contributors.json already exists."
+}
+
+$ComposeCmd = ""
+$ComposeArgs = @("up", "--build", "-d")
+
+if (Get-Command "podman-compose" -ErrorAction SilentlyContinue) {
+    $ComposeCmd = "podman-compose"
+} elseif (Get-Command "docker-compose" -ErrorAction SilentlyContinue) {
+    $ComposeCmd = "docker-compose"
+} elseif (Get-Command "docker" -ErrorAction SilentlyContinue) {
+    try {
+        $null = Invoke-Expression "docker compose version 2>&1"
+        if ($LASTEXITCODE -eq 0) {
+            $ComposeCmd = "docker"
+            $ComposeArgs = @("compose", "up", "--build", "-d")
+        }
+    } catch {}
+}
+
+if ($ComposeCmd -eq "") {
+    Write-Host "❌ Error: Neither podman-compose nor docker compose found on this system." -ForegroundColor Red
+    Write-Host "Please install Podman or Docker Desktop to continue." -ForegroundColor Red
     Exit
 }
 
-# 1. Repository Check
-if (-Not (Test-Path "docker-compose.yml"))
-{
-    git clone https://github.com/RED-Collective/red-engine.git
-    Set-Location "red-engine"
+Write-Host "[*] Starting RED Engine using container engine..." -ForegroundColor Green
+& $ComposeCmd $ComposeArgs
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Error: Failed to start containers." -ForegroundColor Red
+    Exit
 }
 
-# 2. Setup Directories
-if (-Not (Test-Path ".\data"))
-{ New-Item -ItemType Directory -Path ".\data" | Out-Null 
+$ConfigPort = "8080"
+if (Test-Path "config.json") {
+    $ConfigRaw = Get-Content "config.json" -Raw | ConvertFrom-Json -ErrorAction SilentlyContinue
+    if ($ConfigRaw -and $ConfigRaw.addr -match ':(\d+)') {
+        $ConfigPort = $Matches[1]
+    }
 }
 
-# 3. Handle config.json
-if (-Not (Test-Path "config.json"))
-{
-    $Bytes = New-Object Byte[] 16
-    [Security.Cryptography.RNGCryptoServiceProvider]::Create().GetBytes($Bytes)
-    $NewToken = [BitConverter]::ToString($Bytes) -replace '-'
-    $DefaultConfig = @{ addr = ":8080"; siteName = "RED Engine"; dataDir = "/app/data"; adminToken = $NewToken; startupSync = @() }
-    $DefaultConfig | ConvertTo-Json -Depth 10 | Set-Content "config.json"
+$HostIP = "localhost"
+$IPAddresses = [System.Net.Dns]::GetHostAddresses((System.Net.Dns]::GetHostName())) | 
+    Where-Object { $_.AddressFamily -eq 'InterNetwork' -and $_.IPAddressToString -notlike '127.*' }
+if ($IPAddresses) {
+    $HostIP = $IPAddresses[0].IPAddressToString
 }
 
-# 4. Handle contributors.json
-if (-Not (Test-Path "contributors.json"))
-{ "[]" | Set-Content "contributors.json" 
-}
-
-# 5. Build and Deploy
-Write-Host "[*] Building local image..." -ForegroundColor Green
-podman build --network=host -t red-engine-image .
-
-Write-Host "[*] Starting services..." -ForegroundColor Green
-podman-compose up -d
-
-# 6. Final Status
-$Config = Get-Content "config.json" | ConvertFrom-Json
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "✅ Installation Complete!" -ForegroundColor Green
-Write-Host "🌐 Node running at: http://localhost"
-Write-Host "⚙️  Admin Panel: http://localhost/-/admin"
-Write-Host "🔑 YOUR ADMIN TOKEN: $($Config.adminToken)" -ForegroundColor Yellow
-Write-Host "⚠️  PLEASE SAVE THIS TOKEN!" -ForegroundColor Yellow
+Write-Host "🌐 Your node is running at: http://${HostIP}:${ConfigPort}"
+Write-Host "⚙️  Admin Panel: http://${HostIP}:${ConfigPort}/-/admin"
 Write-Host "========================================" -ForegroundColor Cyan
