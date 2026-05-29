@@ -12,7 +12,8 @@
 
 <body class="dark:bg-neutral-950 dark:text-neutral-100 min-h-screen">
   <div id="wrap">
-    <nav id="sidebar">
+    <div id="sidebar"
+      class="dark:bg-black fixed top-0 left-0 z-40 w-32 h-full transition-transform -translate-x-full sm:translate-x-0">
       {{ range $topName, $section := .Nav }}
       <div class="nav-heading">{{ $section.Name }}</div>
       <div class="nav-group">
@@ -25,9 +26,10 @@
         {{ end }} {{ end }}
       </div>
       {{ end }}
-    </nav>
+    </div>
 
-    <main id="main">
+    <!-- Make the same margin for the left the size of the sidebar, (see the w-32, or whatever it is rn) -->
+    <main id="main" class="ml-32">
       {{ if .Crumb }}
       <div class="breadcrumb">
         <a href="/">Home</a>
