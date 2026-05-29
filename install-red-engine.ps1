@@ -1,5 +1,5 @@
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "🚀 Installing RED Engine..." -ForegroundColor Cyan
+Write-Host "🚀 Installing RED Engine (Production Mode)..." -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
 if (-Not (Test-Path "docker-compose.yml")) {

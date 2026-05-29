@@ -4,6 +4,7 @@ networks:
 
 services:
   red_engine:
+    build: .
     image: red-engine-image
     container_name: red_engine_node
     restart: unless-stopped
@@ -20,8 +21,8 @@ services:
     container_name: caddy_proxy
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     networks:
       - clearnet-tier
     volumes:
