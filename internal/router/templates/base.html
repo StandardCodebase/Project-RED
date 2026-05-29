@@ -13,10 +13,10 @@
 <body class="dark:bg-neutral-950 dark:text-neutral-100 min-h-screen">
   <div id="wrap">
     <div id="sidebar"
-      class="dark:bg-black fixed top-0 left-0 z-40 w-32 h-full transition-transform -translate-x-full sm:translate-x-0">
+      class="dark:bg-black fixed top-0 left-0 z-40 w-48 h-full transition-transform -translate-x-full sm:translate-x-0">
       {{ range $topName, $section := .Nav }}
-      <div class="nav-heading">{{ $section.Name }}</div>
-      <div class="nav-group">
+      <div class="nav-heading m-2">{{ $section.Name }}</div>
+      <div class="nav-group flex-row gap-2 ml-4">
         {{ range $art := $section.Articles }}
         <a href="{{ $art.Path }}" class="nav-item">{{ $art.Title }}</a>
         {{ end }} {{ range $subName, $subSection := $section.Sub }}
@@ -29,7 +29,7 @@
     </div>
 
     <!-- Make the same margin for the left the size of the sidebar, (see the w-32, or whatever it is rn) -->
-    <main id="main" class="ml-32">
+    <main id="main" class="ml-48">
       {{ if .Crumb }}
       <div class="breadcrumb flex flex-row gap-2 align-middle justify-left m-8">
         <a class="underline font-light my-auto" href="/">Home</a>
