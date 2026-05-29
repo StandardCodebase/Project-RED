@@ -661,6 +661,9 @@
   .mt-1 {
     margin-top: calc(var(--spacing) * 1);
   }
+  .mt-auto {
+    margin-top: auto;
+  }
   .mb-0 {
     margin-bottom: calc(var(--spacing) * 0);
   }
