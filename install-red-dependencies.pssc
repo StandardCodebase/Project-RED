@@ -1,0 +1,30 @@
+
+
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "🚀 Setting up Project R.E.D. Dev Environment" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+
+# 1. Ensure Winget is available
+if (-not (Get-Command "winget" -ErrorAction SilentlyContinue)) {
+    Write-Host "❌ Error: Winget not found. Please install 'App Installer' from the Microsoft Store." -ForegroundColor Red
+    Exit
+}
+
+# 2. Install Git
+Write-Host "[*] Installing Git..." -ForegroundColor Green
+winget install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements
+
+# 3. Install Podman
+# Podman Desktop includes Podman, a tray icon, and easy management
+Write-Host "[*] Installing Podman Desktop (includes Podman engine)..." -ForegroundColor Green
+winget install --id RedHat.Podman-Desktop -e --source winget --accept-package-agreements --accept-source-agreements
+
+# 4. Refresh Environment Variables
+Write-Host "[*] Configuring Environment..." -ForegroundColor Green
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "✅ Dev Environment Setup Complete!" -ForegroundColor Green
+Write-Host "PLEASE RESTART YOUR TERMINAL for changes to take effect." -ForegroundColor Yellow
+Write-Host "After restarting, run 'podman --version' to verify." -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan

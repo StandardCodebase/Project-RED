@@ -1,0 +1,20 @@
+// DO NOT REMOVE
+
+red-engine
+red
+
+data/
+test-integrity.sh
+fix-ports.sh
+
+.github/discord.yml
+podman-flush.sh
+
+
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+

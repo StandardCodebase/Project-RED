@@ -1,0 +1,164 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Site }} - {{ .Title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/tailwind.css">
+</head>
+<body>
+
+    <!-- Fixed Navbar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+<a href="/" class="site-title">{{ .Site }}</a>
+<span class="text-xs text-white ml-2 opacity-75">Node: {{ .NodeName }}</span>           <div class="search-wrapper">
+                <input type="text" id="search-input" placeholder="Search..." autocomplete="off">
+                <div id="search-results" class="search-results hidden"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-content">
+            {{ range $topName, $section := .Nav }}
+            <div class="nav-section">
+                <h3 class="nav-section-title">{{ $section.Name }}</h3>
+                <div class="nav-links">
+                    {{ range $art := $section.Articles }}
+                    <a href="{{ $art.Path }}" class="nav-link">{{ $art.Title }}</a>
+                    {{ end }}
+                    {{ range $subName, $subSection := $section.Sub }}
+                    <div class="nav-subsection">
+                        <div class="nav-subsection-title">{{ $subSection.Name }}</div>
+                        {{ range $art := $subSection.Articles }}
+                        <a href="{{ $art.Path }}" class="nav-link sub-link">{{ $art.Title }}</a>
+                        {{ end }}
+                    </div>
+                    {{ end }}
+                </div>
+            </div>
+            {{ end }}
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Breadcrumbs -->
+            {{ if .Crumb }}
+            <div class="breadcrumbs">
+                <a href="/">Home</a>
+                {{ range $i, $c := .Crumb }}
+                <span class="separator">/</span>
+                <a href="{{ $c.Path }}">{{ $c.Label }}</a>
+                {{ end }}
+            </div>
+            {{ end }}
+
+            <h1 class="page-title">{{ .Title }}</h1>
+
+            <!-- Verification Status -->
+            <div class="verification-status">
+                {{if .VerificationError}}
+                <div class="alert error">
+                    <div class="alert-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div class="alert-content">
+                        <h3>Integrity Verification Failed</h3>
+                        <p>{{ .VerificationError }}</p>
+                    </div>
+                </div>
+                {{end}}
+
+                {{if .Verified}}
+                <div class="badge verified">
+                    ✓ Verified Contributor: {{ .Author }}
+                </div>
+                {{else}}
+                <div class="badge unverified">
+                    ⚠ Unverified / Unknown Origin
+                </div>
+                {{end}}
+            </div>
+
+            <!-- Article Body -->
+            <article class="article-content">
+                {{ .Body }}
+            </article>
+
+            <!-- SHA-256 Hash -->
+            {{if .Hash}}
+            <div class="hash-footer">
+                <div class="hash-container">
+                    <div class="hash-label">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>SHA-256 CHECKSUM</span>
+                    </div>
+                    <code class="hash-value">{{ .Hash }}</code>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </main>
+
+    <script>
+        // Search functionality
+        let searchIndex = [];
+        fetch('/-/search-index.json')
+            .then(res => res.json())
+            .then(data => { searchIndex = data; })
+            .catch(err => console.error('Failed to load search index', err));
+
+        const searchInput = document.getElementById('search-input');
+        const resultsContainer = document.getElementById('search-results');
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.trim().toLowerCase();
+                if (query.length < 2) {
+                    resultsContainer.classList.add('hidden');
+                    resultsContainer.innerHTML = '';
+                    return;
+                }
+                const matches = searchIndex.filter(item =>
+                    item.title.toLowerCase().includes(query) || item.path.toLowerCase().includes(query)
+                ).slice(0, 10);
+                if (matches.length === 0) {
+                    resultsContainer.innerHTML = '<div class="search-no-results">No results found</div>';
+                } else {
+                    resultsContainer.innerHTML = matches.map(item => `
+                        <a href="${item.path}" class="search-result-item">
+                            ${escapeHtml(item.title)}
+                        </a>
+                    `).join('');
+                }
+                resultsContainer.classList.remove('hidden');
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+                    resultsContainer.classList.add('hidden');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

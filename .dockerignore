@@ -1,0 +1,21 @@
+# Ignore local data
+data/
+remote/
+
+# Ignore Caddy state
+caddy_routing/
+caddy_data/
+caddy_config/
+
+# Ignore local configuration and binaries
+config.json
+red-engine
+*.exe
+
+# Ignore Git
+.git/
+.github/
+
+# Ignore IDE files
+.vscode/
+.idea/

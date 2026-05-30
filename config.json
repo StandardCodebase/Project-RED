@@ -1,0 +1,15 @@
+{
+  "addr": ":8080",
+  "siteName": "RED Engine",
+  "dataDir": "data",
+  "sourceURL": "",
+  "sourceType": "",
+  "adminToken": "aYrlDXsjUxEH12Ju7wl3B1Gq",
+  "webhookSecret": "",
+  "startupSync": [
+    {
+      "url": "https://github.com/StandardCodebase/test-auth.git",
+      "filename": "Test Authentication"
+    }
+  ]
+}
